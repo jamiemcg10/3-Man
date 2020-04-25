@@ -1,0 +1,15 @@
+{
+  "name": "3man",
+  "version": "1.0.0",
+  "description": "3 Man! A dice-based drinking game.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0"
+  }
+}

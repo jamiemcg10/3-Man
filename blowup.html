@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>3 Man!</title>
+
+        <style>
+            button:disabled {
+                display: none;
+            }
+            .dice-box{
+                height: 10vh;
+                border: 2px dotted white;
+                border-radius: 15px;
+                padding-left: .5vw;
+                padding-top: 1vh;
+                width: 100%;
+            }
+
+            .dice-box img {
+                width: 2vw;
+            }
+
+            .die{
+                width: 15vw;
+            }
+
+            .die-label {
+                width: 5vw;
+                display: inline;
+                margin-right: 2vw;
+
+            }
+
+            img + .die-label {
+                margin-left: 5vw;
+            }
+
+            #doubles-roll-btn {
+                background-color: purple;
+                width: fit-content;
+                padding: 15px;
+                margin: 10px auto;
+                border: 3px solid gray;
+                border-radius: 50px;
+            }
+
+            .hat {
+                width: 3vw;
+                margin-left: 1vw;
+            }
+
+            .player {
+                border: 1px solid gray;
+                border-radius: 15px;
+                padding: 5px;
+
+            }
+
+            .player-pool {
+                display: flex;
+                justify-content: space-around;
+            }
+
+            #roll-btn {
+                background-color: green;
+                width: fit-content;
+                padding: 15px;
+                margin: 10px auto;
+                border: 3px solid gray;
+                border-radius: 50px;
+            }
+
+            .ui-draggable-dragging {
+                width: 2vw;
+            }
+
+            .ui-droppable-active {
+                border: 2px dotted gray;
+            }
+
+        </style>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <!--<script src="/static/game.js"></script>-->
+        <script src="/static/classes.js"></script>
+        <script type=module>
+
+            $(document).ready(function(){
+                var socket = io();
+                // temp index into games array
+                var game = 1;
+                var name = `pl1${Math.floor((Math.random() * 100))}`;
+                $('#roll-btn').hide();
+                $('#doubles-roll-btn').hide();
+
+                socket.emit('new player', {name: name, gameID: game});
+            
+
+                const rollEvent = new Event('rolled');
+                const turnComplete = new Event('turnComplete');
+                const tableEmptyEvent = new Event('tableEmpty');
+                console.log(tableEmptyEvent);
+
+                let playersInGame;
+                let currentGame;
+                let cont = 0;
+                let targets = [];
+                let initialDoublesRoll = false;
+
+                // make / roll dice
+                let dice = new Dice(2,6);
+                let roll;
+                let doubles = false;
+                $('#roll-btn').click(() => {
+                    //console.log('rolling');
+                    //roll = dice.roll();
+                    $('#roll-btn').hide();
+                    roll = [6,6];
+                    socket.emit('roll', roll);
+                    checkDice(roll);
+
+                    if (cont === 0 | !doubles){
+                        socket.emit('turn complete', {gameID: game});
+                    }
+                    
+                });
+
+                // update this later to only take one game - update server to emit games separately
+                //socket.on(`state${game}`, function(games) {
+                socket.on('state', function(games) {
+
+                    // update player pool view
+                    currentGame = new Game(games[game]); 
+                    let players = PlayerPool.PlayerPool(currentGame);
+
+                    
+                    //console.log(players);
+                    if (!players.equals(playersInGame)){
+                        $('.player-pool').html("");
+                        players.list.forEach((player) => {
+                            $('.player-pool').append(`<div class="player-container" id="${player.__id}-container"><div class="player" id="${player.__id}">${player.__name}</div><div class="dice-box" id="${player.__id}-box"></div></div>`);
+                            $('.dice-box').droppable({
+                                drop: function(event, ui){
+                                    console.log('.dice-box.drop()');
+                                    console.log(event);
+                                    console.log(event.originalEvent);
+                                    console.log(ui);
+                                    targets.push(`#${event.target.id}`);
+
+                                    $(`#${event.target.id}`).append($(`#${event.originalEvent.target.id}`));  
+
+                                    $(`#${event.originalEvent.target.id}`).css('position', '');
+                                    $(`#${event.originalEvent.target.id}`).css('left', '');
+                                    $(`#${event.originalEvent.target.id}`).css('top', '');
+                                    //$(`#${event.target.id}`).css('height', 'min-content');
+                                    // find size and position of dice-box and snap droppable to it
+                                    
+                                    console.log(targets);
+
+                                    // if table is empty, tell server to have players roll
+                                    // this has to move
+                                    console.log($('#table').children().length);
+                                    if ($('#table').children().length === 0){
+                                        // table is empty - let players roll
+                                        console.log('table empty');
+                                        socket.emit('dice distributed', {gameID: game, locs: targets});
+                                        targets = [];
+                                    }
+
+                                }
+
+                                
+                            });
+                        });
+
+                        // add 3 man hat
+                        //console.log(players.threeMan.id);
+                        $(`#${players.threeMan.id}`).append('<img class="hat" src="/assets/PinClipart.com_jester-clipart_195101.png">');
+                        
+                    }
+                    
+                    playersInGame = players;
+
+                    // highlight current player
+                    $('.player').css('background-color', 'white');
+                    $(`#${playersInGame.currentPlayer.id}`).css('background-color', 'yellow');
+                                  
+                });
+
+                socket.on('start turn', function(player){
+                    console.log('socket.on(start turn)');
+                    console.log(player.id);
+                    if (player.id === socket.id){
+                        $('#roll-btn').show();
+                    
+                    }
+                });
+
+                //someone rolled
+                socket.on('roll', function(roll){
+                    console.log('socket.on(roll)');
+                    //console.log("someone rolled");
+                    $('#message-box').text("");
+                    clearTable();
+                    displayDice(roll);
+                });
+
+                socket.on('drink', function(data){
+                    console.log('socket.on(drink)');
+                    $(`#${data.id}`).css('background-color', 'green');
+                    $('#message-box').text(`${data.name} Drinks!`);
+                });
+
+                socket.on('new three man', function(data){
+                    console.log('socket.on(new three man)');
+                    $('.hat').remove();
+                    console.log(data);
+                    console.log(data.new3Man.__id);
+                    $(`#${data.new3Man.__id}`).append('<img class="hat" src="/assets/PinClipart.com_jester-clipart_195101.png">');
+
+                });
+
+                socket.on('doubles', function(data){
+                    doubles = true;
+                    initialDoublesRoll = true;
+                    console.log('socket.on(doubles)');
+                    // set dice draggable to true let player drag copy of dice to boxes
+                    if (playersInGame.currentPlayer.id == socket.id){
+                        $('.die').draggable("option", "disabled", false);
+                        console.log($('#roll-btn'));
+                        $('#roll-btn').hide();  // this is being undone by the state update
+
+                    }
+                    $('#message-box').text('Doubles!');
+                    //console.log($('div.player-container'));
+
+                });
+
+                $(document).on('mouseup', 'img.die', function(event){
+                    console.log(event);                   
+                    console.log($('#table').children().length);
+                    if ($('#table').children().length === 1){
+                        // table is empty - let players roll
+                        console.log('table empty');
+                        //document.dispatchEvent(tableEmptyEvent);
+                        
+                    }
+                });
+
+
+                $(document).on('tableEmpty', function() {
+                    //if table is empty, tell server to have players roll
+                    //this has been moved
+
+                    console.log(targets);
+                    console.log($('#table').children().length);
+                    if ($('#table').children().length === 1){ // whatever
+                        // table is empty - let players roll
+                        console.log('table empty');
+                        console.log(cont);
+                        console.log(initialDoublesRoll);
+                        if (initialDoublesRoll){
+                            socket.emit('dice distributed', {gameID: game, locs: targets});
+                            initialDoublesRoll = false;
+                        } else {
+                            console.log('do something else');
+                        }
+                        targets = [];
+                    }
+                });
+
+                socket.on('look for dice', function(rtnData){
+                    console.log('socket.on(look for dice)');
+                    console.log(rtnData);
+                    console.log(rtnData.data.rtnRoll);
+
+                        for (let i=0; i<rtnData.data.locs.length; i++){
+                            console.log(i);
+                            console.log(`${rtnData.data.locs[i]}`);
+                            console.log(`#die${i+1}`);
+                            
+                            $(`${rtnData.data.locs[i]}`).append($(`#die${i+1}`)); 
+
+                        }
+
+                    if ($(`#${socket.id}-box`).children().length > 0){
+                        $('#doubles-roll-btn').show(); 
+                    }
+
+
+
+                });
+
+                $('#doubles-roll-btn').click(() => {
+                    console.log('#doubles-roll-btn.click(1)');
+                        $('#doubles-roll-btn').hide();
+                        let doublesDice = new Dice($(`#${socket.id}-box`).children().length,6);
+                        //let roll = doublesDice.roll();
+                        let roll = [3,3];
+                        console.log(roll);
+                        
+                        //console.log(returnRoll);
+                        //socket.emit('doubles roll', {roll: roll, gameID: game, name: name})
+                        if (cont % 2 === 0) {
+                            console.log('return them');
+                            //socket.emit('dice returned roll', {roll: roll, gameID: game, name: name});
+                            // for testing only
+                            socket.emit('dice returned roll', {roll: [3], gameID: game, name: name});
+                            socket.emit('dice returned roll', {roll: [3], gameID: game, name: name});
+                        } else {
+                            socket.emit('doubles roll', {roll: roll, gameID: game, name: name});
+                        }
+
+                        cont += 1;
+                        
+
+                    });
+
+                socket.on('dice returned', function(rtnData){
+                    console.log('socket.on(dice returned)');
+                    let returnRoll = true;
+                    //console.log(rtnData);
+                    //console.log(rtnData.data.rtnRoll);
+                    //if (rtnData.data.rtnRoll){  // check for returned dice
+                        //returnRoll = true;
+                        $('.die-label').remove();
+                        $(`#${playersInGame.currentPlayer.id}-box`).append($(`#die1`)); 
+                        $(`#${playersInGame.currentPlayer.id}-box`).append($(`#die2`)); 
+                    //} 
+
+                    if (playersInGame.currentPlayer.id === socket.id){
+                        $('#doubles-roll-btn').show(); 
+                    }
+
+                    //returnRoll = false;
+                    //debugger;
+     
+                });
+
+                socket.on('doubles roll finished', function(roll){
+                    console.log('socket.on(doubles roll finished)');
+                    //console.log("someone rolled");
+                    console.log(roll);
+                    $('#message-box').text('');
+                    clearTable();
+                    displayDice(roll.roll, roll.names);
+                    //debugger;
+
+                    if (roll.roll[0] === roll.roll[1]){  // also change this if more dice can be used
+                        // current player rolls again - if doubles again, 
+                        console.log(roll.roll);
+                        //console.log(roll.roll[1]);
+                        console.log(playersInGame.currentPlayer.id);
+                        console.log(roll);
+                        console.log(roll.rtnRoll);
+                        console.log(cont);
+                        if (cont % 2 === 0){
+                        //if (playersInGame.currentPlayer.id === socket.id){
+                            // if current player rolled, do this
+                            console.log('safe!');
+                            socket.emit('doubles re-distribute', {gameID: game});
+                            $('#doubles-roll-btn').hide();
+                            //debugger;
+                        } else {
+                            setTimeout(function(){
+                                console.log('here?');F
+                                socket.emit('dice returned', {gameID: game, locs: `#${playersInGame.currentPlayer.id}`, rtnRoll: true});
+                            }, 3000);
+                        }
+                        
+
+                    } else {
+                        cont += 1;
+                        $('#message-box').text(`Drink!`);
+                        if(playersInGame.currentPlayer.id === socket.id){
+                            //console.log('continue!');
+                            $('#roll-btn').show();
+                        }
+                    }
+
+                });
+                
+
+                function checkDice(roll) { 
+                    if (dice.rollTotal === 7){
+                        console.log(7);
+                        // tell the server that someone has to drink
+                        socket.emit('ahead', {gameID: game});
+                        cont += 1;
+                    }
+
+                    if (dice.rollTotal === 11){
+                        console.log(11);
+                        socket.emit('behind', {gameID: game});
+                        cont += 1;
+                    }
+
+                    if (dice.rollTotal === 3){
+                        console.log(3);
+                        socket.emit('three man the hard way', {gameID: game, id: socket.id});
+                    }
+
+                    if (roll.includes(3)){
+                        console.log('3 on a die');
+                        socket.emit('three man', {gameID: game});
+                        cont += 1;
+                    }
+
+                    // test for doubles - needs to change if more dice are allowed
+                    if (roll[0] === roll[1]){
+                        doubles=true;
+                        console.log('doubles');
+                        socket.emit('doubles', {gameID: game});
+                        cont += 1;
+                    }
+                    
+                    if (dice.rollTotal !== 7 & dice.rollTotal !== 11 & !roll.includes(3) & roll[0] !== roll[1]){
+                        cont = 0;
+                    }
+
+                    console.log(`cont: ${cont}`);
+                };
+
+                // leave the game on disconnect
+                $(window).on('unload', (event) => {
+                    socket.emit('remove player', {gameID: game, id: socket.id});
+                    socket.close();
+                });
+
+
+            });
+
+            function displayDice(dice, diceText){
+                    let i = 1;
+                    dice.forEach((die) => {
+                        //console.log(die);
+                        if (diceText){
+                            //debugger;
+                            console.log('check worked');
+                            console.log(`#die${i}`);
+                            console.log(diceText);
+                            console.log(`${diceText[i-1]}`);
+                            $(`#table`).append(`<p class="die-label">${diceText[i-1]}</p>`);
+                            //debugger;
+                        }
+                        $('#table').append(`<img src="./assets/${die}.png" class="die" id="die${i}">`);  
+                        $('.die').draggable({
+                            revert: 'invalid',
+                            cursorAt: {top: 0, left: 0},
+                            disabled: true
+                        });
+                        
+                        i = i+1;
+                    });
+                }
+
+            function clearTable(){
+                $('.die').remove();
+                $('.die-label').remove();
+            }
+
+
+
+
+        </script>
+        <meta charset="utf-8">
+    </head>
+
+    <body>
+        <button id="start" onclick="">Start game</button>
+        <button id="join" onclick="">Join game</button>
+        <h1>3 Man!</h1>
+        <div>
+            <h2>Players</h2>
+            <div class="player-pool" id="player-pool"></div>
+        </div>
+        <div id="roll-btn">Roll</div>
+        <div id="doubles-roll-btn">Roll</div>
+        <div id="message-box"></div>
+        <div id='table'></div>
+    </body>
+
+    <!--<script src="/static/game.js"></script>-->
+
+</html>
