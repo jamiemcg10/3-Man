@@ -137,7 +137,8 @@
                 socket.on(`state${game}`, function(games) {
 
                     // update player pool view
-                    currentGame = new Game(games[game]); 
+                    //console.log(games);
+                    currentGame = new Game(games); 
                     let players = PlayerPool.PlayerPool(currentGame);
 
                     
@@ -214,13 +215,13 @@
                     displayDice(roll.roll);
                 });
 
-                socket.on('drink', function(data){
+                socket.on(`drink${game}`, function(data){
                     console.log('socket.on(drink)');
                     $(`#${data.id}`).css('background-color', 'green');
                     $('#message-box').text(`${data.name} Drinks!`);
                 });
 
-                socket.on('new three man', function(data){
+                socket.on(`new three man${game}`, function(data){
                     console.log('socket.on(new three man)');
                     $('.hat').remove();
                     console.log(data);
@@ -230,7 +231,7 @@
 
                 });
 
-                socket.on('doubles', function(data){
+                socket.on(`doubles${game}`, function(data){
                     console.log(doublesRollNum);
                     console.log('socket.on(doubles)');
                     // set dice draggable to true let player drag copy of dice to boxes
@@ -245,7 +246,7 @@
 
                 });
 
-                socket.on('look for dice', function(rtnData){
+                socket.on(`look for dice${game}`, function(rtnData){
                     console.log('socket.on(look for dice)');
                     console.log(rtnData);
                     console.log(rtnData.data.rtnRoll);
@@ -293,7 +294,7 @@
 
                     });
 
-                socket.on('doubles roll finished', function(roll){
+                socket.on(`doubles roll finished${game}`, function(roll){
                     console.log('socket.on(doubles roll finished)');
                     //console.log("someone rolled");
                     console.log(roll);
@@ -448,8 +449,6 @@
     </head>
 
     <body>
-        <button id="start" onclick="">Start game</button>
-        <button id="join" onclick="">Join game</button>
         <h1>3 Man!</h1>
         <div>
             <h2>Players</h2>

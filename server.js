@@ -22,6 +22,9 @@ app.get('/', function(request, response) {
     response.sendFile(path.join(__dirname, 'index.html'));
 });
 
+app.get('/landing', function(request, response) {
+    response.sendFile(path.join(__dirname, 'landing.html'));
+});
 
 // Starts the server
 server.listen(5000, function() {
@@ -29,28 +32,87 @@ server.listen(5000, function() {
 }); 
 
 
-// Add the WebSocket handlers
-io.on('connection', function(socket) {
-
-});
-
 var games = new Array(10);
+games[0] = [];
 
 setInterval(function() {
-    for (let i=0; i<games.length; i++){
+    for (let i=1; i<games.length; i++){
         //io.sockets.emit(`state${i}`, games);
-        io.sockets.emit(`state${i}`, games);
+        //io.sockets.emit(`state${i}`, games);
+        io.sockets.emit(`state${i}`, games[i]);
     }
     
-}, 1000);
+}, 5000);
 
-var players = [];
-var playerPool;
 
 // player needs to be able to leave game
-// isolate games
+
+/// join games
 
 io.on('connection', function(socket) {
+    socket.on('add to waiting room', function(data){
+        console.log('add to waiting room');
+        console.log(data);
+        // do when player joins
+        if (games[data.gameID] == null) {
+            console.log('adding to empty game');
+            let pp = new classes.PlayerPool([new classes.Player(data.name, socket.id)]);
+            //console.log(pp);
+            games[data.gameID] = new classes.Game(pp);
+            // move this next line when everyone joins the room at the same time
+            console.log(games[data.gameID].players.currentPlayer.id);
+            io.sockets.emit(`start turn${data.gameID}`, {id: games[data.gameID].players.currentPlayer.id});
+        } else {
+            console.log('before');
+            console.log(games[data.gameID].players.list);
+            console.log('adding to existing game');
+            games[data.gameID].players.addPlayer(new classes.Player(data.name, socket.id));
+            console.log('after');
+            console.log(games[data.gameID].players.list);
+        }
+    });
+
+    socket.on('validate code', function(data){
+        let code = data.code;
+        let gameList = games[0];
+        // console.log(code);
+        // console.log(typeof code);
+        // console.log(games[0]);
+        // console.log([2].includes(2));
+        // console.log(typeof gameList[0]);
+        // console.log(gameList.includes(Number(code)));
+        // console.log(Array.isArray(games[0]));
+        if (games[0].includes(Number(code))){
+            io.sockets.emit(`validated code${code}`, {code: code, valid: true, requestingID: data.requestingID});
+        } else {
+            io.sockets.emit(`validated code${code}`, {code: code, valid: false})
+        }
+    });
+
+    // for generating and receiving codes
+    socket.on('get code', function(data){
+        console.log('socket.on(get code)');
+        let code = generateCode();
+        console.log(data);
+        console.log(`code${data}`);
+        let returnID = `code${data}`;
+        io.sockets.emit('game code', {code: code, id: data});
+    });
+    
+    function generateCode(){
+        for (let i=1; i<games.length; i++){
+            if (games[i] === undefined | games[i] === null){
+                let code = Math.floor((i + Math.random()) * 1000);
+                console.log(code);
+                games[0].push(Number(code));
+                return code;
+            }
+        }
+    }
+    
+
+    /// game play
+
     socket.on('new player', function(data){
         // do when player joins
         console.log(data);
@@ -80,19 +142,19 @@ io.on('connection', function(socket) {
     socket.on('ahead', function(data) {
         let target = games[data.gameID].players.ahead;
         console.log(target);
-        io.sockets.emit('drink', {id: target.id, name: target.name});
+        io.sockets.emit(`drink${data.gameID}`, {id: target.id, name: target.name});
     });
 
     socket.on('behind', function(data) {
         let target = games[data.gameID].players.behind;
         console.log(target);
-        io.sockets.emit('drink', {id: target.id, name: target.name});
+        io.sockets.emit(`drink${data.gameID}`, {id: target.id, name: target.name});
     });
 
     socket.on('three man', function(data) {
         let target = games[data.gameID].players.threeMan;
         console.log(target);
-        io.sockets.emit('drink', {id: target.id, name: target.name});
+        io.sockets.emit(`drink${data.gameID}`, {id: target.id, name: target.name});
     });
 
     socket.on('three man the hard way', function(data) {
@@ -100,11 +162,11 @@ io.on('connection', function(socket) {
         console.log(games[data.gameID].players.list.indexOf(target));
         games[data.gameID].players.threeMan = games[data.gameID].players.list.indexOf(target);
         console.log(games[data.gameID].players.threeMan);
-        io.sockets.emit('new three man', {new3Man: games[data.gameID].players.threeMan});
+        io.sockets.emit(`new three man${data.gameID}`, {new3Man: games[data.gameID].players.threeMan});
     });
 
     socket.on('doubles', function(data) {
-        io.sockets.emit('doubles', {});
+        io.sockets.emit(`doubles${data.gameID}`, {});
     });
 
 
@@ -116,7 +178,7 @@ io.on('connection', function(socket) {
         socket.on('dice distributed', function(data){
             let idData = data;
             console.log('tell clients to look for data');
-            io.sockets.emit('look for dice', {data: idData});
+            io.sockets.emit(`look for dice${data.gameID}`, {data: idData});
         });
             
         socket.on('doubles roll', function(newData) {
@@ -136,7 +198,7 @@ io.on('connection', function(socket) {
                 }
 
                 //console.log(newData.rtnRoll);
-                io.sockets.emit('doubles roll finished', {roll: game.doublesData.roll, names: game.doublesData.names, rtnRoll: newData.rtnRoll});
+                io.sockets.emit(`doubles roll finished${newData.gameID}`, {roll: game.doublesData.roll, names: game.doublesData.names, rtnRoll: newData.rtnRoll});
                 game.clearDoublesData();
                 console.log(game.doublesData);
             }
@@ -144,19 +206,6 @@ io.on('connection', function(socket) {
 
         
     }
-
-
-    socket.on('dice returned', function(data) {
-        // console.log(data);
-        // if (true){
-        //     io.sockets.emit('dice returned');
-        // }
-
-        // from dice distributed
-        let idData = data;
-        console.log('tell clients to look for returned dice');
-        io.sockets.emit('look for dice', {data: idData});
-    });
 
     {
         let roll=[];
@@ -178,7 +227,7 @@ io.on('connection', function(socket) {
             }
 
             if (roll.length == 2){
-                io.sockets.emit('doubles roll finished', {roll: roll, names: names, rtnRoll: data.rtnRoll});
+                io.sockets.emit(`doubles roll finished${data.gameID}`, {roll: roll, names: names, rtnRoll: data.rtnRoll});
                 roll = [];
                 names = [];
                 console.log(roll);
@@ -204,6 +253,10 @@ io.on('connection', function(socket) {
             }
         }   
     });
+
+
+
+
     
     
 });
