@@ -22,8 +22,8 @@ app.get('/', function(request, response) {
     response.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/landing', function(request, response) {
-    response.sendFile(path.join(__dirname, 'landing.html'));
+app.get('/game', function(request, response) {
+    response.sendFile(path.join(__dirname, 'game.html'));
 });
 
 // Starts the server
@@ -109,6 +109,12 @@ io.on('connection', function(socket) {
             }
         }
     }
+
+    socket.on('start game', function(data){
+        console.log(data);
+        console.log('starting game');
+        io.sockets.emit(`go to game page${data.gameID}`);
+    });
     
 
     /// game play
