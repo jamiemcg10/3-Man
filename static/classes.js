@@ -201,6 +201,15 @@ class Game {
             roll: [],
             names: []
         }
+        this.__code;
+    }
+
+    set code(code) {
+        this.__code = code;
+    }
+
+    get code(){
+        return this.__code;
     }
 
     set players(players) {
@@ -223,8 +232,6 @@ class Game {
 
     pushDoublesDataName(name){
         this.__doublesData.names.push(name);
-
-        
     }
 
     get doublesData(){
