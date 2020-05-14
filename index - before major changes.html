@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>3 Man!</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="3 Man drinking game brought to the internet. Play with your friends in a private session."> 
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/dark.min.css">
+        
+        
+        <style>
+            .code {
+                font-size: 15vh;
+                text-align: center;
+                font-weight: 900;
+                color: yellow;
+            }
+
+            .flex-container {
+                display: flex;
+                flex-direction: column;
+                width: fit-content;
+                margin: auto;
+            }
+
+            .flex-container button {
+                width: 100%;
+                font-weight: bold;
+            }
+
+            h1 {
+                
+                margin-top: 25vh;
+                text-align: center;
+            }
+
+            input {
+                margin-right: 0px;
+            }
+
+            #play{
+                margin-top: 5vh;
+            }
+            .player-pool {
+                display: flex;
+                margin-top: 5vh;
+            }
+
+            .player-pool div {
+                margin-right: 7.5px;
+                margin-left: 7.5px;
+                max-width: 60vw;
+            }
+
+            .player-pool:first-child{
+                margin-left: 0px;
+            }
+
+
+        </style>
+        
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/static/classes.js"></script>
+        <script>
+
+            $(document).ready(() => {
+                
+                var socket = io({reconnection: false});
+                var id = socket.id;
+                let inWaitingRoom = false;
+                let inGame = false;
+                let game;
+                let code;
+                let name;
+                let playersInGame;
+                
+
+                $('#start').click(() => {
+                    if ($('#name').val() === ""){
+                        return false;
+                    }
+                    id = socket.id;
+                    name = $('#name').val();
+                    //$('div').remove();
+                    $('.flex-container').children().remove();
+                    socket.emit('get code', socket.id);
+                    console.log(socket.id);
+                    console.log(id);
+                    console.log(`code${id}`);
+                });
+
+                socket.on('game code', function(data){
+                    // $('body').append(`<div class="code">${data.code}</div>`);
+                    // $('body').append('<div class="player-pool"></div>');
+                    if (data.id === id){
+                        console.log(data);
+                        //let code = data.code;
+                        code = data.code;
+                        //let game = String(code)[0];
+                        game = String(code)[0];
+                        console.log(code);
+                        console.log(data.code);
+
+                        // enter waiting room here - need to continue to display code somehow
+                        socket.emit('add to waiting room', {code: data.code, gameID: game, id: id, name: name, locationDELETE: 'onGameCode'});
+                        inWaitingRoom = true;
+                        
+                        displayRoom(game);
+
+                    }
+                    
+                });
+
+
+
+                $('#join').click(() => {
+                    if ($('#name').val() === ""){
+                        return false;
+                    }
+                    if ($('#code').val() === ""){
+                        $('.warning').remove();
+                        $('.flex-container').append('<div class="warning">Please enter a code.</div>')
+                        return false;
+                    }
+                    console.log($('#code').val());
+                    id = socket.id;
+                    //let code = $('#code').val();
+                    code = $('#code').val();
+                    game = String(code)[0];
+                    name = $('#name').val();
+                    console.log(code);
+                    socket.emit('validate code', {code: code, requestingID: id});
+    
+
+                    socket.on(`validated code${code}`, function(code){
+                        console.log(code);
+                        if (code.valid & code.requestingID === id){
+                            console.log('code is valid');
+                            //$('div').remove();
+                            $('.flex-container').children().remove();
+                            // $('body').append(`<div class="code">${code.code}</div>`);
+                            // $('body').append('<div class="player-pool"></div>');
+                            socket.emit('add to waiting room', {code: code, gameID: game, id: id, name: name, locationDELETE: 'onValidatedCode'});
+                            inWaitingRoom = true;
+                            console.log(game);
+                            displayRoom(game);
+                        }
+                        else {
+                            $('.warning').remove();
+                            $('.flex-container').append('<div class="warning">The code you entered is invalid.</div>')
+
+                        }
+
+                    });
+                });
+
+
+
+            
+                function displayRoom(roomNo){
+                    console.log('in displayRoom(roomNo)');
+                    $('.flex-container').append(`<div class="code">${code}</div>`);
+                    $('.flex-container').append('<div class="player-pool"></div>');
+                    $('.flex-container').append('<button id="play">Play!</button>');
+                    $('#play').css("width", "initial");
+
+                    socket.on(`state${roomNo}`, function(data){
+                        console.log(data);
+                        if (inWaitingRoom){
+                            // display players
+
+                            // update player pool view
+                            currentGame = new Game(data); 
+                            let players = PlayerPool.PlayerPool(currentGame);
+
+                            
+                            //console.log(players);
+                            if (!players.equals(playersInGame)){
+                                console.log('not equal');
+                                $('.player-pool').html("");
+                                console.log(players.list);
+                                players.list.forEach((player) => {
+                                    console.log('in forEach');
+                                    $('.player-pool').append(`<div id="${player.__id}-container"><div class="player" id="${player.__id}">${player.__name}</div><div class="dice-box" id="${player.__id}-box"></div></div>`);
+                                });
+
+                            }
+                            
+                            playersInGame = players;
+
+                        }
+                    });
+
+                    $('#play').click(() => {
+                        console.log('#play.click()');
+                        // transition to main page
+                        socket.emit('start game', {gameID: game});
+
+                        socket.on(`go to game page${game}`, ()=>{
+                            console.log('going to game');
+                            renderGamePage();
+                            
+                        });
+                    });
+
+                    // leave the game on disconnect
+                    $(window).on('unload', (event) => {
+                        socket.emit('remove player', {gameID: roomNo, id: socket.id});
+                        socket.close();
+                    });
+                    //return null;
+                }
+
+
+                function renderGamePage(){
+                    $('body').children().remove();
+                    $('body').append('<h1>3 Man!</h1>');
+                    $('body').append($('div')).addClass('flex-container');
+                    $('.flex-container').append($('div')).append('<h2>Players</h2><div class="player-pool" id="player-pool"></div>');
+                    $('.flex-container').append('<button id="roll-btn">Roll</button>');
+                    $('.flex-container').append('<button id="doubles-roll-btn">Roll</button>');
+                    $('.flex-container').append('<div id="message-box"></div>');
+                    $('.flex-container').append('<div id="table"></div>');
+                }
+            });
+
+
+
+        </script>
+    </head>
+
+    <body>
+        <h1>3 Man!</h1>
+        <div class="flex-container">
+            
+            <input type="text" placeholder="Name" id="name">
+            <input type="number" placeholder="Table code (if joining)" id="code">
+            <br/>
+            <button id="start">Start new game</button>
+            <button id="join">Join existing game</button>
+
+        </div>
+        
+    </body>
+
+</html>

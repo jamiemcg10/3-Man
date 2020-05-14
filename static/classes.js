@@ -12,16 +12,6 @@ class Player {
         return this.__id;
     }
 
-    activate(){
-        return true;
-        //$(`#${this.__id}`).css('background-color', 'yellow');
-    }
-
-    inactivate(){
-        return true;
-        //$(`#${this.__id}`).css('background-color', 'white');
-    }
-
 }
 
 class PlayerPool {
@@ -133,8 +123,15 @@ class PlayerPool {
         return this.players[index];
     }
 
+    get newest(){
+        return this.players.length-1;
+    }
+
+    set newest(newest){
+
+    }
+
     nextPlayer(){
-        this.currentPlayer.inactivate();
         this.stackHead += 1;
         if (this.stackHead >= this.players.length){
             this.stackHead = 0;
@@ -194,14 +191,18 @@ class Dice {
 }
 
 class Game {
- // needs player pool
     constructor (playerPool){
         this.people = playerPool;
         this.__doublesData = {
             roll: [],
-            names: []
+            names: [],
+            __doublesRollNum: 0
         }
         this.__code;
+        this.__inProgress = false;
+        this.__lastRoll;
+        // can the dice live here?
+        //this.__dice = new Dice(2,6);
     }
 
     set code(code) {
@@ -224,6 +225,30 @@ class Game {
         this.__doublesData = data
     }
 
+    get doublesRollNum(){
+        return this.__doublesData.__doublesRollNum;
+    }
+
+    set doublesRollNum(num){
+        this.__doublesData.__doublesRollNum = num;
+    }
+
+    get lastRoll(){
+        return this.__lastRoll;
+    }
+
+    set lastRoll(roll){
+        this.__lastRoll = roll;
+    }
+
+    get inProgress(){
+        return this.__inProgress;
+    }
+
+    set inProgress(game){
+
+    }
+
     pushDoublesDataRoll(roll){
         roll.forEach((die) => {
             this.__doublesData.roll.push(die);
@@ -240,7 +265,12 @@ class Game {
 
     clearDoublesData(){
         this.__doublesData.roll = [];
-        this.__doublesData.names=[];
+        this.__doublesData.names = [];
+
+    }
+
+    start(){
+        this.__inProgress = true;
     }
 }
 

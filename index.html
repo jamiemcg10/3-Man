@@ -5,6 +5,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="description" content="3 Man drinking game brought to the internet. Play with your friends in a private session."> 
+        <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/dark.min.css">
         
         
@@ -47,8 +48,6 @@
             }
 
             .player-pool div {
-                margin-right: 7.5px;
-                margin-left: 7.5px;
                 max-width: 60vw;
             }
 
@@ -58,23 +57,155 @@
 
 
         </style>
+
+<style>
+    button:disabled {
+        display: none;
+    }
+
+    .player-container {
+        margin-right: 7.5px;
+        margin-left: 7.5px;
+    }
+
+    .dice-box{
+        height: 10vh;
+        border: 2px dotted #202b38;
+        border-radius: 15px;
+        padding-top: 1vh;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+    }
+
+    .dice-box img {
+        width: 2vw;
+        border-radius: 3px;
+    }
+
+    .die{
+        width: 10vw;
+        background-color: white;
+        border: 2px solid black;
+        border-radius: 10px;
+        margin-right: 1px;
+        margin-left: 1px;
+    }
+
+    .die-label {
+        width: 5vw;
+        display: inline;
+        margin-right: 2vw;
+
+    }
+
+    .flex-container {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .game-title{
+        margin-top: 0vh;
+    }
+
+    img + .die-label {
+        margin-left: 5vw;
+    }
+
+    #doubles-roll-btn {
+        background-color: rgb(187, 8, 187);
+        width: 20vw;
+        padding: 15px;
+        margin: 10px auto;
+        border: 3px solid gray;
+        border-radius: 20px;
+    }
+
+    .hat {
+        width: 3vw;
+        margin-left: 1vw;
+    }
+
+    #message-box{
+        xheight: 10vh;
+        text-align: center;
+        font-weight: bold;
+        font-size: x-large;
+        margin-bottom: 5px;
+
+    }
+
+    .player {
+        border: 1px solid gray;
+        border-radius: 10px;
+        padding: 10px;
+        color: #202b38;
+        background-color: white;
+
+    }
+
+    .player-pool {
+        display: flex;
+        justify-content: space-around;
+    }
+
+    #roll-btn {
+        color: #202b38;
+        background-color: rgb(214, 214, 0);
+        width: 20vw;
+        padding: 15px;
+        margin: 10px auto;
+        border: 3px solid gray;
+        border-radius: 20px;
+    }
+
+    #room-code{
+        color: yellow;
+        font-weight: bold;
+    }
+
+    #table{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgb(41, 23, 17);
+        width: 50vw;
+        height: 30vh;
+        xmargin: auto;
+        border: 3px solid rgb(41, 23, 17);
+        border-radius: 5px;
+    }
+
+    .ui-draggable-dragging {
+        width: 2vw;
+        border-radius: 3px;
+    }
+
+    .ui-droppable-active {
+        border: 2px dotted gray;
+    }
+
+</style>
         
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <script src="/static/classes.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+        <script src="static/jquery.ui.touch-punch.min.js"></script>
         <script>
-            var socket = io({reconnection: false});
-            //var socket = io({reconnection: true});
-            var id = socket.id;
-            let inWaitingRoom = false;
-            let game;
-            let code;
 
             $(document).ready(() => {
-
-                //let game;
+                
+                var socket = io({reconnection: false});
+                var id = socket.id;
+                let inWaitingRoom = false;
+                let inGame = false;
+                let game;
+                let code;
                 let name;
-                let playersInGame = null;
+                let playersInGame;
+                
 
                 $('#start').click(() => {
                     if ($('#name').val() === ""){
@@ -106,7 +237,7 @@
                         socket.emit('add to waiting room', {code: data.code, gameID: game, id: id, name: name, locationDELETE: 'onGameCode'});
                         inWaitingRoom = true;
                         
-                        displayRoom(game);
+                        displayWaitingRoom(game);
 
                     }
                     
@@ -137,16 +268,23 @@
                         console.log(code);
                         if (code.valid & code.requestingID === id){
                             console.log('code is valid');
-                            //$('div').remove();
-                            $('.flex-container').children().remove();
-                            // $('body').append(`<div class="code">${code.code}</div>`);
-                            // $('body').append('<div class="player-pool"></div>');
-                            socket.emit('add to waiting room', {code: code, gameID: game, id: id, name: name, locationDELETE: 'onValidatedCode'});
-                            inWaitingRoom = true;
-                            console.log(game);
-                            displayRoom(game);
+                            console.log(code.gameInProgress);
+                            if (!code.gameInProgress){ // game hasn't started
+                                $('.flex-container').children().remove();
+                                socket.emit('add to waiting room', {code: code, gameID: game, id: id, name: name, locationDELETE: 'onValidatedCode'});
+                                inWaitingRoom = true;
+                                console.log(game);
+                                displayWaitingRoom(game);
+                            } else { // game has started
+                                socket.emit('new player', {name: name, gameID: game});
+                                renderGamePage();
+                                //can this be the actual roll?
+                                displayDice([6,6]);
+                                inGame = true;
+                                playGame(game, true);
+                            }
                         }
-                        else {
+                        else if (code.requestingID === id) {
                             $('.warning').remove();
                             $('.flex-container').append('<div class="warning">The code you entered is invalid.</div>')
 
@@ -158,7 +296,7 @@
 
 
             
-                function displayRoom(roomNo){
+                function displayWaitingRoom(roomNo){
                     console.log('in displayRoom(roomNo)');
                     $('.flex-container').append(`<div class="code">${code}</div>`);
                     $('.flex-container').append('<div class="player-pool"></div>');
@@ -166,7 +304,7 @@
                     $('#play').css("width", "initial");
 
                     socket.on(`state${roomNo}`, function(data){
-                        console.log(data);
+                        //console.log(data);
                         if (inWaitingRoom){
                             // display players
 
@@ -182,7 +320,7 @@
                                 console.log(players.list);
                                 players.list.forEach((player) => {
                                     console.log('in forEach');
-                                    $('.player-pool').append(`<div id="${player.__id}-container"><div class="player" id="${player.__id}">${player.__name}</div><div class="dice-box" id="${player.__id}-box"></div></div>`);
+                                    $('.player-pool').append(`<div class="player-container" id="${player.__id}-container"><div class="player" id="${player.__id}">${player.__name}</div><div class="dice-box" id="${player.__id}-box"></div></div>`);
                                 });
 
                             }
@@ -197,10 +335,23 @@
                         // transition to main page
                         socket.emit('start game', {gameID: game});
 
-                        socket.on(`go to game page${game}`, ()=>{
-                            console.log('going to game');
-                            
-                        });
+
+                    });
+
+                    socket.on(`go to game page${game}`, ()=>{
+                        console.log('going to game');
+                        inWaitingRoom = false;
+                        renderGamePage();
+                        displayDice([6,6]);
+                        inGame = true;
+                        playGame(game);
+ 
+                    });
+
+                    socket.on(`remove player${game}`, function(data) {
+                        console.log('removing in remove player');
+                        console.log(`.${data.id}-container`);
+                        $(`#${data.id}-container`).remove();
                     });
 
                     // leave the game on disconnect
@@ -212,9 +363,359 @@
                 }
 
 
+                function renderGamePage(){
+                    $('body').children().remove();
+                    $('body').append(`<p id="room-code">Room code: ${code}</p>`)
+                    $('body').append('<h1 class="game-title">3 Man!</h1>');
+                    $('body').append('<div class="flex-container"></div>');
+                    $('.flex-container').append($('div')).append('<h2>Players</h2><div class="player-pool" id="player-pool"></div>');
+                    $('.flex-container').append('<button id="roll-btn">Roll</button>');
+                    $('.flex-container').append('<button id="doubles-roll-btn">Roll</button>');
+                    $('.flex-container').append('<div id="message-box"></div>');
+                    $('.flex-container').append('<div id="table"></div>');
+
+                }
+                
+                function playGame(game, joiningLate){
+                    $('#roll-btn').hide();
+                    $('#doubles-roll-btn').hide();
+
+                    let playersInGame;
+                    let currentGame;
+                    let cont = 0;
+                    let targets = [];
+                    let doublesRollNum = 0;
+                    let hasJoinedLate;
+
+                    // make / roll dice
+                    let dice = new Dice(2,6);
+                    let roll;
+                    let doubles = false;
+
+                    if (joiningLate){
+                         hasJoinedLate = true;
+                    } 
+
+                    $('#roll-btn').click(() => {
+                        roll = dice.roll();
+                        socket.emit('roll', {roll: roll, gameID: game});
+                        checkDice(roll);
+
+                        console.log(doubles);
+                        console.log(cont);
+                        if (cont === 0 & !doubles){
+                            socket.emit('turn complete', {gameID: game});
+                        }
+
+                        console.log('end of roll.click()');
+                    
+                    });
+
+
+                    // might need to differentiate from earlier version
+                    socket.on(`state${game}`, function(games) {
+
+                        // update player pool view
+                        currentGame = new Game(games); 
+                        let players = PlayerPool.PlayerPool(currentGame);
+                        console.log(players);
+                        console.log(playersInGame);
+
+                        if (!players.equals(playersInGame)){
+                            $('.player-pool').html("");
+                            players.list.forEach((player) => {
+                                $('.player-pool').append(`<div class="player-container" id="${player.__id}-container"><div class="player" id="${player.__id}">${player.__name}</div><div class="dice-box" id="${player.__id}-box"></div></div>`);
+                                $('.dice-box').droppable({
+                                    drop: function(event, ui){
+                                        console.log('.dice-box.drop()');
+                                        console.log(event);
+                                        console.log(event.originalEvent);
+                                        console.log(ui);
+                                        targets.push(`#${event.target.id}`);
+
+                                        $(`#${event.target.id}`).append($(`#${event.originalEvent.target.id}`));  
+
+                                        $(`#${event.originalEvent.target.id}`).css('position', '');
+                                        $(`#${event.originalEvent.target.id}`).css('left', '');
+                                        $(`#${event.originalEvent.target.id}`).css('top', '');
+                                        
+                                        console.log(targets);
+
+                                        console.log($('#table').children().length);
+                                        if ($('#table').children().length === 0){
+                                            // table is empty - let players roll
+                                            console.log('table empty');
+                                            socket.emit('dice distributed', {gameID: game, locs: targets});
+                                            targets = [];
+                                            
+                                        }
+                                    }
+
+                                    
+                                });
+                            });
+
+                            // add 3 man hat
+                            $(`#${players.threeMan.id}`).append('<img class="hat" src="/assets/PinClipart.com_jester-clipart_195101.png">');
+                            
+                        }
+                        
+                        playersInGame = players;
+
+                        if (hasJoinedLate){
+                            socket.emit('three man the hard way', {gameID: game});
+                            hasJoinedLate = false;
+                        }
+
+
+                        // highlight current player
+                        $('.player').css('background-color', 'white');
+                        console.log(playersInGame.currentPlayer.id);
+                        $(`#${playersInGame.currentPlayer.id}`).css('background-color', '#ffff66');
+                                    
+                    });
+
+                    socket.on(`start turn${game}`, function(player){
+                        console.log('socket.on(start turn)');
+                        console.log(player);
+                        console.log(player.player);
+                        cont = 0;
+                        doublesRollNum = 0;
+                        if (player.id === socket.id || (player.player !== undefined && player.player.__id === socket.id)){
+
+                            $('#roll-btn').show();
+                        
+                        }
+                    });
+
+                    //someone rolled
+                    socket.on(`roll${game}`, function(roll){
+                        console.log('socket.on(roll)');
+                        console.log(roll);
+                        $('#message-box').text(' ');
+                        clearTable();
+                        displayDice(roll.roll);
+                    });
+
+                    socket.on(`drink${game}`, function(data){
+                        console.log('socket.on(drink)');
+                        $(`#${data.id}`).css('background-color', 'green');
+                        $('#message-box').append(`${data.name} Drinks!<br/>`);
+                    });
+
+                    socket.on(`new three man${game}`, function(data){
+                        console.log('socket.on(new three man)');
+                        $('.hat').remove();
+                        console.log(data);
+                        console.log(data.new3Man.__id);
+                        $(`#${data.new3Man.__id}`).append('<img class="hat" src="/assets/PinClipart.com_jester-clipart_195101.png">');
+                        $('#message-box').append(`${data.new3Man.__name} is the new 3 Man!<br/>`);
+                    });
+
+                    socket.on(`doubles${game}`, function(data){
+                        console.log(doublesRollNum);
+                        console.log('socket.on(doubles)');
+                        // set dice draggable to true let player drag copy of dice to boxes
+                        console.log(playersInGame.currentPlayer.id);
+                        console.log(socket.id);
+                        if (playersInGame.currentPlayer.id == socket.id){
+                            $('.die').draggable("option", "disabled", false);
+                            console.log($('#roll-btn'));
+                            $('#roll-btn').hide();  // this is being undone by the state update
+
+                        }
+                        $('#message-box').append('Doubles!<br/>');
+                        doublesRollNum+=1;
+
+                    });
+
+                    socket.on(`look for dice${game}`, function(rtnData){
+                        //doublesRollNum might need to be controlled elsewhere                        
+                        console.log('socket.on(look for dice)');
+                        //this is lazy but it might work
+                        if (doublesRollNum === 0){
+                            //render dice
+                            doublesRollNum = rtnData.doublesRollNum;
+                        }
+                        console.log(rtnData);
+                        console.log(rtnData.data.rtnRoll);
+                        console.log(doublesRollNum);
+                        $('.die-label').remove();
+                        if (doublesRollNum % 2 === 1){
+                            // if distributed by current player
+                            for (let i=0; i<rtnData.data.locs.length; i++){
+                                console.log(i);
+                                console.log(`${rtnData.data.locs[i]}`);
+                                console.log(`#die${i+1}`);
+                                
+                                $(`${rtnData.data.locs[i]}`).append($(`#die${i+1}`)); 
+                            }
+                        } else {
+                            ;
+                        }
+
+                        if ($(`#${socket.id}-box`).children().length > 0){
+                            $('#doubles-roll-btn').show(); 
+                        }
+
+                    });
+
+                    $('#doubles-roll-btn').click(() => {
+                        console.log('#doubles-roll-btn.click()');
+                            $('#doubles-roll-btn').hide();
+                            let doublesDice = new Dice($(`#${socket.id}-box`).children().length,6);
+                            let roll = doublesDice.roll();
+                            //let roll = [3,3];
+                            console.log(roll);
+                            
+                            if (doublesRollNum % 2 === 0) {
+                                console.log('original player re-roll');
+                                socket.emit('dice returned roll', {roll: roll, gameID: game, name: name});
+                                // for testing only
+                                //socket.emit('dice returned roll', {roll: [3], gameID: game, name: name});
+                                //socket.emit('dice returned roll', {roll: [3], gameID: game, name: name});
+                            } else {
+                                console.log('line 287 - another doubles roll');
+                                socket.emit('doubles roll', {roll: roll, gameID: game, name: name});
+                            }
+
+                        });
+
+                    socket.on(`doubles roll finished${game}`, function(roll){
+                        console.log('socket.on(doubles roll finished)');
+                        console.log(roll);
+                        $('#message-box').text(' ');
+                        clearTable();
+                        displayDice(roll.roll, roll.names);
+
+                        if (roll.roll[0] === roll.roll[1]){  // also change this if more dice can be used
+                            // current player rolls again - if doubles again, 
+                            
+                            console.log(roll.roll);
+                            //console.log(roll.roll[1]);
+                            console.log(playersInGame.currentPlayer.id);
+                            console.log(roll);
+                            console.log(roll.rtnRoll);
+                            console.log(doublesRollNum);
+                            if (doublesRollNum % 2 === 0){
+                                console.log('safe!');
+                                if (playersInGame.currentPlayer.id == socket.id){
+                                    $('.die').draggable("option", "disabled", false);
+                                    $('#doubles-roll-btn').hide();
+                                }
+
+                            } else {
+                                setTimeout(function(){//place dice back in current player box 
+                                    $(`#${playersInGame.currentPlayer.id}-box`).append($(`#die1`)); 
+                                    $(`#${playersInGame.currentPlayer.id}-box`).append($(`#die2`)); 
+                                    $('.die-label').remove();
+
+                                    if(playersInGame.currentPlayer.id === socket.id){
+                                        $('#doubles-roll-btn').show();
+                                    }
+                                }, 1500);
+                            }
+                            
+                        } 
+                        else {
+                            console.log(cont);
+                            $('#message-box').text(`Drink!`);
+                            if(playersInGame.currentPlayer.id === socket.id){
+                                //console.log('continue!');
+                                $('#roll-btn').show();
+                                doubles = false;
+                            }
+                        }
+
+                        doublesRollNum += 1;
+
+                    });
+
+                    socket.on(`remove player${game}`, function(data) {
+                        console.log('removing in remove player');
+                        console.log(`.${data.id}-container`);
+                        $(`#${data.id}-container`).remove();
+                    });
+
+                    $(document).on('mousedown', 'img', function(){
+                        $('.die-label').remove();
+                    });
+
+
+    
+
+                    function checkDice(roll) { 
+                        if (dice.rollTotal === 7){
+                            console.log(7);
+                            // tell the server that someone has to drink
+                            socket.emit('ahead', {gameID: game});
+                            cont += 1;
+                        }
+
+                        if (dice.rollTotal === 11){
+                            console.log(11);
+                            socket.emit('behind', {gameID: game});
+                            cont += 1;
+                        }
+
+                        if (dice.rollTotal === 3){
+                            console.log(3);
+                            socket.emit('three man the hard way', {gameID: game, id: socket.id});
+                            console.log('end of dice.rollTotal === 3');
+                        }
+
+                        if (roll.includes(3)){
+                            console.log('3 on a die');
+                            socket.emit('three man', {gameID: game});
+                            cont += 1;
+                        }
+
+                        // test for doubles - needs to change if more dice are allowed
+                        if (roll[0] === roll[1]){
+                            doubles=true;
+                            cont += 1;
+                            console.log('doubles');
+                            socket.emit('doubles', {gameID: game});
+                            
+                        }
+                        
+                        if (dice.rollTotal !== 7 & dice.rollTotal !== 11 & !roll.includes(3) & roll[0] !== roll[1]){
+                            cont = 0;
+                            $('#roll-btn').hide();
+                        }
+
+                        console.log(`cont: ${cont}`);
+                    };
+
+                }
+            
             });
 
+            function displayDice(dice, diceText){
+                    let i = 1;
+                    dice.forEach((die) => {
+                        if (diceText){
+                            console.log('check worked');
+                            console.log(`#die${i}`);
+                            console.log(diceText);
+                            console.log(`${diceText[i-1]}`);
+                            $(`#table`).append(`<p class="die-label">${diceText[i-1]}</p>`);
+                        }
+                        $('#table').append(`<img src="./assets/${die}.png" class="die" id="die${i}">`);  
+                        $('.die').draggable({
+                            revert: 'invalid',
+                            cursorAt: {top: 0, left: 0},
+                            disabled: true
+                        });
+                        
+                        i = i+1;
+                    });
+                }
 
+            function clearTable(){
+                $('.die').remove();
+                $('.die-label').remove();
+            }
 
         </script>
     </head>

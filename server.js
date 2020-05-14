@@ -83,15 +83,16 @@ io.on('connection', function(socket) {
         // console.log(gameList.includes(Number(code)));
         // console.log(Array.isArray(games[0]));
         if (games[0].includes(Number(code))){
-            io.sockets.emit(`validated code${code}`, {code: code, valid: true, requestingID: data.requestingID});
+            io.sockets.emit(`validated code${code}`, {code: code, valid: true, requestingID: data.requestingID, gameInProgress: games[code[0]].inProgress});
         } else {
-            io.sockets.emit(`validated code${code}`, {code: code, valid: false})
+            io.sockets.emit(`validated code${code}`, {code: code, valid: false, requestingID: data.requestingID})
         }
     });
 
     // for generating and receiving codes
     socket.on('get code', function(data){
         console.log('socket.on(get code)');
+        console.log(games);
         let code = generateCode();
         console.log(data);
         console.log(`code${data}`);
@@ -113,7 +114,9 @@ io.on('connection', function(socket) {
     socket.on('start game', function(data){
         console.log(data);
         console.log('starting game');
+        games[data.gameID].start();
         io.sockets.emit(`go to game page${data.gameID}`);
+        io.sockets.emit(`start turn${data.gameID}`, {id: games[data.gameID].players.currentPlayer.id});
     });
     
 
@@ -122,20 +125,22 @@ io.on('connection', function(socket) {
     socket.on('new player', function(data){
         // do when player joins
         console.log(data);
-        if (games[data.gameID] == null) {
-            let pp = new classes.PlayerPool([new classes.Player(data.name, socket.id)]);
-            //console.log(pp);
-            games[data.gameID] = new classes.Game(pp);
-            // move this next line when everyone joins the room at the same time
-            console.log(games[data.gameID].players.currentPlayer.id);
-            io.sockets.emit(`start turn${data.gameID}`, {id: games[data.gameID].players.currentPlayer.id});
-        } else {
-            games[data.gameID].players.addPlayer(new classes.Player(data.name, socket.id));
-        }
+        // if (games[data.gameID] == null) {
+        //     let pp = new classes.PlayerPool([new classes.Player(data.name, socket.id)]);
+        //     //console.log(pp);
+        //     games[data.gameID] = new classes.Game(pp);
+        //     // move this next line when everyone joins the room at the same time
+        //     console.log(games[data.gameID].players.currentPlayer.id);
+        //     io.sockets.emit(`start turn${data.gameID}`, {id: games[data.gameID].players.currentPlayer.id});
+        // } else {
+        //     games[data.gameID].players.addPlayer(new classes.Player(data.name, socket.id));
+        // }
+        games[data.gameID].players.addPlayer(new classes.Player(data.name, socket.id));
 
     });
 
     socket.on('roll', function(data) {
+        games[data.gameID].lastRoll = data.roll;
         io.sockets.emit(`roll${data.gameID}`, data);
     });
 
@@ -143,6 +148,8 @@ io.on('connection', function(socket) {
         console.log('in turn complete');
         games[data.gameID].players.nextPlayer();
         io.sockets.emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
+        // kill any doubles rolls happening
+        games[data.gameID].doublesRollNum = 0;
     });
 
     socket.on('ahead', function(data) {
@@ -164,14 +171,27 @@ io.on('connection', function(socket) {
     });
 
     socket.on('three man the hard way', function(data) {
-        let target = games[data.gameID].players.currentPlayer;
-        console.log(games[data.gameID].players.list.indexOf(target));
-        games[data.gameID].players.threeMan = games[data.gameID].players.list.indexOf(target);
+        if (data.id){
+            //someone actually rolled a 3
+            let target = games[data.gameID].players.currentPlayer;
+            console.log(games[data.gameID].players.list.indexOf(target));
+            games[data.gameID].players.threeMan = games[data.gameID].players.list.indexOf(target);
+
+        } else {
+            // someone just joined
+            console.log(data);
+            games[data.gameID].players.threeMan = games[data.gameID].players.newest;
+            console.log(games[data.gameID]);
+            console.log(games[data.gameID].players);
+            console.log(games[data.gameID].players.newest);
+        }
+        console.log(games[data.gameID].players.length);
         console.log(games[data.gameID].players.threeMan);
         io.sockets.emit(`new three man${data.gameID}`, {new3Man: games[data.gameID].players.threeMan});
     });
 
     socket.on('doubles', function(data) {
+        games[data.gameID].doublesRollNum = games[data.gameID].doublesRollNum+1;
         io.sockets.emit(`doubles${data.gameID}`, {});
     });
 
@@ -184,7 +204,7 @@ io.on('connection', function(socket) {
         socket.on('dice distributed', function(data){
             let idData = data;
             console.log('tell clients to look for data');
-            io.sockets.emit(`look for dice${data.gameID}`, {data: idData});
+            io.sockets.emit(`look for dice${data.gameID}`, {data: idData, doublesRollNum: games[data.gameID].doublesRollNum});
         });
             
         socket.on('doubles roll', function(newData) {
@@ -198,8 +218,8 @@ io.on('connection', function(socket) {
 
 
             if (game.doublesData.roll.length == 2){
-                //1 player has both dice
                 if (game.doublesData.names.length === 1){
+                    //1 player has both dice
                     game.pushDoublesDataName(game.doublesData.names[0]);
                 }
 
@@ -249,15 +269,32 @@ io.on('connection', function(socket) {
         console.log('removing a player');
         console.log(games[data.gameID]);
         if (games[data.gameID] !== undefined){
-            games[data.gameID].players.removePlayer(data.id);
-        
-        //console.log(game);
-        //onsole.log(games[data.gameID].players.list.length);
+            if (games[data.gameID].players.currentPlayer.id === data.id){
+                
+                games[data.gameID].players.removePlayer(data.id);
+                console.log(games[data.gameID].players.currentPlayer);
+                //games[data.gameID].players.nextPlayer();
+                console.log(games[data.gameID].players.currentPlayer);
+                io.sockets.emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
+                // kill any doubles rolls happening
+                games[data.gameID].clearDoublesData();
+                games[data.gameID].doublesRollNum = 0;
+                console.log(games[data.gameID].players.currentPlayer);
+            }
+            
+            
+            //console.log(game);
+            //console.log(games[data.gameID].players.list.length);
+            console.log(games[data.gameID].players.list.length);
             if (games[data.gameID].players.list.length === 0){
                 games[data.gameID] = null;
                 //io.sockets.close();
             }
+
+            io.sockets.emit(`remove player${data.gameID}`, {id: data.id});
         }   
+
+        console.log(`removed player: ${games[data.gameID]}`);
     });
 
 
