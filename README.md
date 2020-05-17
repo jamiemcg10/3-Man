@@ -1,4 +1,4 @@
-![logo](/assets/dice-favicon.png)
+![logo](/assets/dice-favicon-mini.png)
 
 # 3-Man
 
