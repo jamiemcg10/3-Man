@@ -35,14 +35,14 @@ server.listen(5000, function() {
 var games = new Array(10);
 games[0] = [];
 
-setInterval(function() {
-    for (let i=1; i<games.length; i++){
-        //io.sockets.emit(`state${i}`, games);
-        //io.sockets.emit(`state${i}`, games);
-        io.sockets.emit(`state${i}`, games[i]);
-    }
+// setInterval(function() {
+//     for (let i=1; i<games.length; i++){
+//         //io.sockets.emit(`state${i}`, games);
+//         //io.sockets.emit(`state${i}`, games);
+//         io.sockets.emit(`state${i}`, games[i]);
+//     }
     
-}, 5000);
+// }, 5000);
 
 
 // player needs to be able to leave game
@@ -56,36 +56,35 @@ io.on('connection', function(socket) {
         // do when player joins
         if (games[data.gameID] == null) {
             console.log('adding to empty game');
-            let pp = new classes.PlayerPool([new classes.Player(data.name, socket.id)]);
+            let pp = new classes.PlayerPool([new classes.Player(data.name, data.id)]);
             //console.log(pp);
             games[data.gameID] = new classes.Game(pp);
             // move this next line when everyone joins the room at the same time
             console.log(games[data.gameID].players.currentPlayer.id);
-            io.sockets.emit(`start turn${data.gameID}`, {id: games[data.gameID].players.currentPlayer.id});
+            io.sockets.binary(false).emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
         } else {
             console.log('before');
             console.log(games[data.gameID].players.list);
             console.log('adding to existing game');
-            games[data.gameID].players.addPlayer(new classes.Player(data.name, socket.id));
+            games[data.gameID].players.addPlayer(new classes.Player(data.name, data.id));
             console.log('after');
             console.log(games[data.gameID].players.list);
         }
+        
+        io.sockets.binary(false).emit(`add to waiting room${data.gameID}`, {name: data.name, id: data.id});
     });
 
     socket.on('validate code', function(data){
+        console.log('socket.on(validate code)');
         let code = data.code;
         let gameList = games[0];
-        // console.log(code);
-        // console.log(typeof code);
-        // console.log(games[0]);
-        // console.log([2].includes(2));
-        // console.log(typeof gameList[0]);
-        // console.log(gameList.includes(Number(code)));
-        // console.log(Array.isArray(games[0]));
         if (games[0].includes(Number(code))){
-            io.sockets.emit(`validated code${code}`, {code: code, valid: true, requestingID: data.requestingID, gameInProgress: games[code[0]].inProgress});
+            console.log(games[code[0]]);
+            console.log(games[code[0]].players);
+            console.log(games[code[0]].players.list);
+            io.sockets.binary(false).emit(`validated code${code}`, {code: code, valid: true, requestingID: data.requestingID, playersAlreadyInRoom: games[code[0]].players.list, gameInProgress: games[code[0]].inProgress});
         } else {
-            io.sockets.emit(`validated code${code}`, {code: code, valid: false, requestingID: data.requestingID})
+            io.sockets.binary(false).emit(`validated code${code}`, {code: code, valid: false, requestingID: data.requestingID})
         }
     });
 
@@ -96,8 +95,7 @@ io.on('connection', function(socket) {
         let code = generateCode();
         console.log(data);
         console.log(`code${data}`);
-        let returnID = `code${data}`;
-        io.sockets.emit('game code', {code: code, id: data});
+        io.sockets.binary(false).emit('game code', {code: code, id: data});
     });
     
     function generateCode(){
@@ -115,8 +113,12 @@ io.on('connection', function(socket) {
         console.log(data);
         console.log('starting game');
         games[data.gameID].start();
-        io.sockets.emit(`go to game page${data.gameID}`);
-        io.sockets.emit(`start turn${data.gameID}`, {id: games[data.gameID].players.currentPlayer.id});
+        io.sockets.binary(false).emit(`go to game page${data.gameID}`, {gameData: games[data.gameID]});
+        io.sockets.binary(false).emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
+    });
+
+    socket.on('get game data', function(data){
+        io.sockets.binary(false).emit(`game data sent${data.gameID}`, {gameData: games[data.gameID]});
     });
     
 
@@ -136,18 +138,19 @@ io.on('connection', function(socket) {
         //     games[data.gameID].players.addPlayer(new classes.Player(data.name, socket.id));
         // }
         games[data.gameID].players.addPlayer(new classes.Player(data.name, socket.id));
-
+        io.sockets.binary(false).emit(`new player${data.gameID}`, {name: data.name, id: data.id});
     });
 
     socket.on('roll', function(data) {
         games[data.gameID].lastRoll = data.roll;
-        io.sockets.emit(`roll${data.gameID}`, data);
+        io.sockets.binary(false).emit(`roll${data.gameID}`, data);
     });
 
     socket.on('turn complete', function(data) {
         console.log('in turn complete');
         games[data.gameID].players.nextPlayer();
-        io.sockets.emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
+        io.sockets.binary(false).emit(`end of turn${data.gameID}`);
+        io.sockets.binary(false).emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
         // kill any doubles rolls happening
         games[data.gameID].doublesRollNum = 0;
     });
@@ -155,19 +158,19 @@ io.on('connection', function(socket) {
     socket.on('ahead', function(data) {
         let target = games[data.gameID].players.ahead;
         console.log(target);
-        io.sockets.emit(`drink${data.gameID}`, {id: target.id, name: target.name});
+        io.sockets.binary(false).emit(`drink${data.gameID}`, {id: target.id, name: target.name});
     });
 
     socket.on('behind', function(data) {
         let target = games[data.gameID].players.behind;
         console.log(target);
-        io.sockets.emit(`drink${data.gameID}`, {id: target.id, name: target.name});
+        io.sockets.binary(false).emit(`drink${data.gameID}`, {id: target.id, name: target.name});
     });
 
     socket.on('three man', function(data) {
         let target = games[data.gameID].players.threeMan;
         console.log(target);
-        io.sockets.emit(`drink${data.gameID}`, {id: target.id, name: target.name});
+        io.sockets.binary(false).emit(`drink${data.gameID}`, {id: target.id, name: target.name});
     });
 
     socket.on('three man the hard way', function(data) {
@@ -187,12 +190,12 @@ io.on('connection', function(socket) {
         }
         console.log(games[data.gameID].players.length);
         console.log(games[data.gameID].players.threeMan);
-        io.sockets.emit(`new three man${data.gameID}`, {new3Man: games[data.gameID].players.threeMan});
+        io.sockets.binary(false).emit(`new three man${data.gameID}`, {new3Man: games[data.gameID].players.threeMan});
     });
 
     socket.on('doubles', function(data) {
         games[data.gameID].doublesRollNum = games[data.gameID].doublesRollNum+1;
-        io.sockets.emit(`doubles${data.gameID}`, {});
+        io.sockets.binary(false).emit(`doubles${data.gameID}`, {});
     });
 
 
@@ -204,7 +207,7 @@ io.on('connection', function(socket) {
         socket.on('dice distributed', function(data){
             let idData = data;
             console.log('tell clients to look for data');
-            io.sockets.emit(`look for dice${data.gameID}`, {data: idData, doublesRollNum: games[data.gameID].doublesRollNum});
+            io.sockets.binary(false).emit(`look for dice${data.gameID}`, {data: idData, doublesRollNum: games[data.gameID].doublesRollNum});
         });
             
         socket.on('doubles roll', function(newData) {
@@ -224,7 +227,7 @@ io.on('connection', function(socket) {
                 }
 
                 //console.log(newData.rtnRoll);
-                io.sockets.emit(`doubles roll finished${newData.gameID}`, {roll: game.doublesData.roll, names: game.doublesData.names, rtnRoll: newData.rtnRoll});
+                io.sockets.binary(false).emit(`doubles roll finished${newData.gameID}`, {roll: game.doublesData.roll, names: game.doublesData.names, rtnRoll: newData.rtnRoll});
                 game.clearDoublesData();
                 console.log(game.doublesData);
             }
@@ -253,7 +256,7 @@ io.on('connection', function(socket) {
             }
 
             if (roll.length == 2){
-                io.sockets.emit(`doubles roll finished${data.gameID}`, {roll: roll, names: names, rtnRoll: data.rtnRoll});
+                io.sockets.binary(false).emit(`doubles roll finished${data.gameID}`, {roll: roll, names: names, rtnRoll: data.rtnRoll});
                 roll = [];
                 names = [];
                 console.log(roll);
@@ -266,20 +269,24 @@ io.on('connection', function(socket) {
     }
 
     socket.on('remove player', function(data){
-        console.log('removing a player');
+        console.log(data);
+        console.log(`removing a player ${data.removeID}`);
         console.log(games[data.gameID]);
         if (games[data.gameID] !== undefined){
-            if (games[data.gameID].players.currentPlayer.id === data.id){
+
+            if (games[data.gameID].inProgress & games[data.gameID].players.currentPlayer.id === data.id){
                 
-                games[data.gameID].players.removePlayer(data.id);
+                games[data.gameID].players.removePlayer(data.id);                
                 console.log(games[data.gameID].players.currentPlayer);
                 //games[data.gameID].players.nextPlayer();
                 console.log(games[data.gameID].players.currentPlayer);
-                io.sockets.emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
+                io.sockets.binary(false).emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
                 // kill any doubles rolls happening
                 games[data.gameID].clearDoublesData();
                 games[data.gameID].doublesRollNum = 0;
                 console.log(games[data.gameID].players.currentPlayer);
+            } else {
+                games[data.gameID].players.removePlayer(data.id);
             }
             
             
@@ -291,7 +298,7 @@ io.on('connection', function(socket) {
                 //io.sockets.close();
             }
 
-            io.sockets.emit(`remove player${data.gameID}`, {id: data.id});
+            io.sockets.binary(false).emit(`remove player${data.gameID}`, {id: data.id});
         }   
 
         console.log(`removed player: ${games[data.gameID]}`);
