@@ -4,12 +4,30 @@
   "description": "3 Man! A dice-based drinking game.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
-  "author": "",
+  "author": "Jamie Smart",
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.1",
     "socket.io": "^2.3.0"
-  }
+  },
+  "engines": {
+    "node": "12.14.1"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jamiemcg10/3-Man.git"
+  },
+  "keywords": [
+    "3man",
+    "drinking",
+    "game"
+  ],
+  "bugs": {
+    "url": "https://github.com/jamiemcg10/3-Man/issues"
+  },
+  "homepage": "https://github.com/jamiemcg10/3-Man#readme"
 }

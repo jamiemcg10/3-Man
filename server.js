@@ -1,6 +1,4 @@
-//import {Dice, Player, PlayerPool} from './classes.js';
 // Dependencies
-
 var express = require('express');
 var http = require('http');
 var path = require('path');
@@ -12,7 +10,12 @@ var app = express();
 var server = http.Server(app);
 var io = socketIO(server);
 
-app.set('port', 5000);
+let port = process.env.PORT;
+if (port == null || port == ""){
+    port = 5000;
+}
+
+app.set('port', port);
 app.use('/static', express.static(__dirname + '/static'));
 app.use('/assets', express.static(__dirname + '/assets'));
 
@@ -27,9 +30,14 @@ app.get('/game', function(request, response) {
 });
 
 // Starts the server
-server.listen(5000, function() {
-    console.log('Starting server on port 5000');
-}); 
+
+server.listen(port, function(){
+    console.log('Starting server');
+});
+// OLD
+// server.listen(5000, function() {
+//     console.log('Starting server on port 5000');
+// }); 
 
 
 var games = new Array(10);
