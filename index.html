@@ -41,7 +41,8 @@
 
             #play{
                 margin-top: 5vh;
-                max-width: 20vw;
+                margin-right: 0px;
+                width: initial;
                 align-self: center;
             }
             .player-pool {
@@ -95,7 +96,8 @@
                 width: 5vw;
                 display: inline;
                 margin-right: 2vw;
-
+                overflow-wrap: anywhere;
+                text-align: right;
             }
 
             .flex-container {
@@ -186,8 +188,47 @@
                 border: 2px dotted gray;
             }
 
+            @media only screen and (max-width: 550px) {
+                .die {
+                    border-radius: 5px;
+                    width: 7vw;
+                }
+
+                .die-label {
+                    font-size: x-small;
+                    margin-right: 0vw;
+                    width: 11vw;
+                }
+
+                h1 {
+                    margin-top: 20vh;
+                }
+
+                .hat {
+                    height: 2vh;
+                }
+
+                .dice-box{
+                    height: 3vh;
+                }
+
+                .player {
+                    font-size: x-small;
+                    padding: 7px;
+                }
+                #roll-btn {
+                    width: 35vw;
+                }
+
+                #table {
+                    width: 75vw;
+                    height: 25vh;
+                }
+            }
+
 </style>
         
+        <link rel="icon" href="/assets/dice-favicon.png">
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="/socket.io/socket.io.js"></script>
         <script src="/static/classes.js"></script>
