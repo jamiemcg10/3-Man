@@ -8,7 +8,7 @@ This is a basic, online version of the dice-based 3 Man drinking game that allow
 
 
 ## To play:
-1. Enter your name in the Name box and either:
+1. Enter your name in the Name box and either
     * start a game by clicking "Start new game", or 
     * join a game by entering a friend's game code and clicking "Join existing game"
 2. When everyone you want to play with is in the waiting room, anyone can click the "Play" button to start the game

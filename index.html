@@ -21,6 +21,7 @@
                 display: flex;
                 flex-direction: column;
                 width: fit-content;
+                max-width: max-content;
                 margin: auto;
             }
 
@@ -263,8 +264,6 @@
                 });
 
                 socket.on('game code', function(data){
-                    // $('body').append(`<div class="code">${data.code}</div>`);
-                    // $('body').append('<div class="player-pool"></div>');
                     if (data.id === id){
                         console.log(data);
                         //let code = data.code;
@@ -447,12 +446,16 @@
                                 console.log(event.originalEvent);
                                 console.log(ui);
                                 targets.push(`#${event.target.id}`);
+                                console.log(`#${event.target.id}`);
+                                console.log(`#${event.originalEvent.target.id}`);
+                                console.log(ui.draggable[0].id);
 
-                                $(`#${event.target.id}`).append($(`#${event.originalEvent.target.id}`));  
 
-                                $(`#${event.originalEvent.target.id}`).css('position', '');
-                                $(`#${event.originalEvent.target.id}`).css('left', '');
-                                $(`#${event.originalEvent.target.id}`).css('top', '');
+                                $(`#${event.target.id}`).append($(`#${ui.draggable[0].id}`));  
+
+                                $(`#${ui.draggable[0].id}`).css('position', '');
+                                $(`#${ui.draggable[0].id}`).css('left', '');
+                                $(`#${ui.draggable[0].id}`).css('top', '');
                                 
                                 console.log(targets);
 
