@@ -19,7 +19,7 @@ This is a basic, online version of the dice-based 3 Man drinking game that allow
 ## House rules:
 * Become the 3 Man if you roll a 3 (1 + 2)
 * Roll a 3 on either die, the 3 Man drinks
-* Roll a 7, the player ahead/after of you drinks
+* Roll a 7, the player ahead of/after you drinks
 * Roll an 11, the player behind/before you drinks
 
 You can decide how many rolls make a rule because it's not built into the game yet.
