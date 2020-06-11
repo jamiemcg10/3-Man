@@ -183,7 +183,7 @@ class Dice {
             roll.push((Math.floor((Math.random() * 100)) % this.sides) + 1);
         }
 
-        //console.log(roll);
+        console.log(roll);
         this.sum = roll.reduce((total, num) => {
             return total += num;
         });
@@ -200,11 +200,19 @@ class Game {
         this.__doublesData = {
             roll: [],
             names: [],
+            topPositions: [],
+            leftPositions: [],
+            rotations: [],
             __doublesRollNum: 0
         }
         this.__code;
         this.__inProgress = false;
-        this.__lastRoll;
+        this.__lastRoll = {
+            roll: [],
+            topPositions: [],
+            leftPositions: [],
+            rotations: []
+        }
         // can the dice live here?
         //this.__dice = new Dice(2,6);
     }
@@ -242,7 +250,10 @@ class Game {
     }
 
     set lastRoll(roll){
-        this.__lastRoll = roll;
+        this.__lastRoll.roll = roll.roll;
+        this.__lastRoll.topPositions = roll.topPositions;
+        this.__lastRoll.leftPositions = roll.leftPositions;
+        this.__lastRoll.rotations = roll.rotations;
     }
 
     get inProgress(){
@@ -263,6 +274,18 @@ class Game {
         this.__doublesData.names.push(name);
     }
 
+    pushDoublesDataTopPosition(position){
+        this.__doublesData.topPositions.push(position);
+    }
+
+    pushDoublesDataLeftPosition(position){
+        this.__doublesData.leftPositions.push(position);
+    }
+
+    pushDoublesDataRotation(rotation){
+        this.__doublesData.rotations.push(rotation);
+    }
+
     get doublesData(){
         return this.__doublesData;
     }
@@ -270,6 +293,9 @@ class Game {
     clearDoublesData(){
         this.__doublesData.roll = [];
         this.__doublesData.names = [];
+        this.__doublesData.topPositions = [];
+        this.__doublesData.leftPositions = [];
+        this.__doublesData.rotations = [];
 
     }
 
