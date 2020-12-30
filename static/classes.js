@@ -183,12 +183,12 @@ class Dice {
             roll.push((Math.floor((Math.random() * 100)) % this.sides) + 1);
         }
 
-        console.log(roll);
+        console.log('186-->' + roll);
         this.sum = roll.reduce((total, num) => {
             return total += num;
         });
         
-        console.log(this.sum);
+        console.log('191-->' + this.sum);
         return roll;
     }
 
@@ -287,7 +287,12 @@ class Game {
     }
 
     get doublesData(){
-        return this.__doublesData;
+        return `roll: ${this.__doublesData.roll},
+        names: ${this.__doublesData.names},
+        topPositions: ${this.__doublesData.topPositions},
+        leftPositions: ${this.__doublesData.leftPositions},
+        rotations: ${this.__doublesData.rotations},
+        __doublesRollNum:${this.__doublesData.__doublesRollNum}`;
     }
 
     clearDoublesData(){

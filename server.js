@@ -32,30 +32,13 @@ app.get('/game', function(request, response) {
 // Starts the server
 
 server.listen(port, function(){
-    console.log('Starting server');
+    console.log('Starting server (port 5000 on localhost)');
 });
-// OLD
-// server.listen(5000, function() {
-//     console.log('Starting server on port 5000');
-// }); 
 
 
 var games = new Array(10);
 games[0] = [];
 
-// setInterval(function() {
-//     for (let i=1; i<games.length; i++){
-//         //io.sockets.emit(`state${i}`, games);
-//         //io.sockets.emit(`state${i}`, games);
-//         io.sockets.emit(`state${i}`, games[i]);
-//     }
-    
-// }, 5000);
-
-
-// player needs to be able to leave game
-
-/// join games
 
 io.on('connection', function(socket) {
     socket.on('add to waiting room', function(data){
@@ -206,8 +189,17 @@ io.on('connection', function(socket) {
 
     socket.on('doubles', function(data) {
         games[data.gameID].doublesRollNum = games[data.gameID].doublesRollNum+1;
-        io.sockets.binary(false).emit(`doubles${data.gameID}`, {});
+        io.sockets.binary(false).emit(`new doubles${data.gameID}`, {});
     });
+
+    socket.on('increaseDoublesRollNum', function(data){
+        games[data.gameID].doublesRollNum = games[data.gameID].doublesRollNum+1;
+    });
+
+    socket.on('clearDoublesRollNum', function(data){
+        games[data.gameID].doublesRollNum = 0;
+    });
+
 
 
 
@@ -221,43 +213,54 @@ io.on('connection', function(socket) {
             io.sockets.binary(false).emit(`look for dice${data.gameID}`, {data: idData, doublesRollNum: games[data.gameID].doublesRollNum});
         });
             
-        socket.on('doubles roll', function(newData) {
-            //let clearTable = false;
+        function generatePositions(numPositions, gameID){
+            let topPositions = [];
+            let leftPositions = [];
+            let rotations = [];
 
+            for (let i=0; i<numPositions; i++){
+                topPositions.push(Math.random());
+                leftPositions.push(Math.random());
+                rotations.push(Math.random());
+                games[gameID].pushDoublesDataTopPosition(topPositions[i]);
+                games[gameID].pushDoublesDataLeftPosition(leftPositions[i]);
+                games[gameID].pushDoublesDataRotation(rotations[i]);
+            }
+
+            return [topPositions, leftPositions, rotations];
+        }
+
+        socket.on('doubles roll', function(newData) {
+
+            console.log('235-->' + newData.roll);
             console.log(games[newData.gameID].doublesData);
             let game = games[newData.gameID];
             let names = newData.name;
             console.log(game);
             console.log(newData);
             
-            let topPositions = [];
-            let leftPositions = [];
-            let rotations = [];
-            for (let i=0; i<newData.roll.length; i++){
-                topPositions.push(Math.random());
-                leftPositions.push(Math.random());
-                rotations.push(Math.random());
-                game.pushDoublesDataTopPosition(topPositions[i]);
-                game.pushDoublesDataLeftPosition(leftPositions[i]);
-                game.pushDoublesDataRotations(rotations[i]);
-            }
+            let topPositions;
+            let leftPositions;
+            let rotations;
 
             game.pushDoublesDataRoll(newData.roll);
             game.pushDoublesDataName(newData.name);
-            console.log(game.doublesData);
+            console.log("248-->" + game.doublesData);
+
+            [topPositions, leftPositions, rotations] = generatePositions(newData.roll.length, newData.gameID);
 
             if (newData.roll.length === 2){ // player has both dice
                 names[1] = names[0];
                 game.pushDoublesDataName(game.doublesData.names[0]);
             }
 
-            io.sockets.binary(false).emit(`doubles die rolled${newData.gameID}`, {roll: newData.roll, name: names, ids: newData.ids, topPositions: topPositions, leftPositions: leftPositions, rotations: rotations});
+            io.sockets.binary(false).emit(`doubles die rolled${newData.gameID}`, {roll: newData.roll, names: names, ids: newData.ids, topPositions: topPositions, leftPositions: leftPositions, rotations: rotations});
 
 
             if (game.doublesData.roll.length === 2){
-                io.sockets.binary(false).emit(`doubles roll finished${newData.gameID}`, {roll: game.doublesData.roll, names: game.doublesData.names, rtnRoll: newData.rtnRoll});
+                io.sockets.binary(false).emit(`new doubles roll finished${newData.gameID}`, {roll: game.doublesData.roll, names: game.doublesData.names, rtnRoll: newData.rtnRoll});
                 game.clearDoublesData();
-                console.log(game.doublesData);
+                console.log("263-->" + game.doublesData);
             }
         });
 
@@ -278,12 +281,19 @@ io.on('connection', function(socket) {
             console.log(names);
             console.log(roll);
 
+            let topPositions;
+            let leftPositions;
+            let rotations;
+
+            [topPositions, leftPositions, rotations] = generatePositions(data.roll.length, data.gameID);
+
             // 1 player has both dice
             if (names.length === 1){
                 names[1] = names[0];
             }
 
             if (roll.length == 2){
+                io.sockets.binary(false).emit(`doubles die rolled${data.gameID}`, {roll: roll, names: names, ids: data.ids, topPositions: topPositions, leftPositions: leftPositions, rotations: rotations});
                 io.sockets.binary(false).emit(`doubles roll finished${data.gameID}`, {roll: roll, names: names, rtnRoll: data.rtnRoll});
                 roll = [];
                 names = [];
@@ -295,6 +305,11 @@ io.on('connection', function(socket) {
             roll=[];
         });
     }
+
+    socket.on('new rule', function(data){
+        console.log(data);
+        io.sockets.binary(false).emit(`new rule${data.gameID}`, {rule: data.ruleText});
+    });
 
     socket.on('remove player', function(data){
         console.log(data);
@@ -333,7 +348,7 @@ io.on('connection', function(socket) {
                 if (games[0].indexOf(codeToRemove) >= 0){
                     games[0][games[0].indexOf(codeToRemove)] = null;
                 }
-                console.log(games[0]);
+                console.log(`ACTIVE GAME CODES: ${games[0]}`);
                 //io.sockets.close();
             }
 

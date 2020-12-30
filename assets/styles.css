@@ -1,0 +1,290 @@
+#add-rule{
+    height: 100%;
+    padding: 5px 20px
+}
+.code {
+    font-size: 15vh;
+    text-align: center;
+    font-weight: 900;
+    color: yellow;
+}
+
+details {
+    position: absolute;
+    bottom: 3vh;
+}
+
+
+details > summary {
+    font-size: 2.5vh;
+}
+
+details li {
+    font-size: 2vh;
+}
+
+details > ul {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.flex-container {
+    display: flex;
+    flex-direction: column;
+    width: fit-content;
+    max-width: max-content;
+    margin: auto;
+}
+
+.flex-container button {
+    width: 100%;
+    font-weight: bold;
+}
+
+.game-rules{
+    position: absolute;
+    bottom: initial;
+    margin-top: 2vh;
+}
+
+h1 {
+    
+    margin-top: 15vh;
+    text-align: center;
+    font-size: 5.5vh;
+}
+
+input {
+    margin-right: 0px;
+}
+
+#play{
+    margin-top: 5vh;
+    margin-right: 0px;
+    width: initial;
+    align-self: center;
+
+    height: 6vh;
+    font-size: 2vh;
+    padding-bottom: 5vh;
+    padding-top: 2vh;
+}
+.player-pool {
+    display: flex;
+    margin-top: 5vh;
+    max-width: 60vw;
+}
+
+.player-pool:first-child{
+    margin-left: 0px;
+}
+
+button:disabled {
+    display: none;
+}
+
+.player-container {
+    margin-right: 7.5px;
+    margin-left: 7.5px;
+}
+
+.player-created {
+    list-style-type: circle;
+}
+
+.dice-box{
+    margin: .5px;
+    height: 5vh;
+    border: 2px dotted #202b38;
+    border-radius: 15px;
+    padding-top: 1vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.dice-box img {
+    width: 1vw;
+    border-radius: 3px;
+    margin-right: 1px;
+    margin-left: 1px;
+}
+
+.die{
+    width: 5vw;
+    background-color: white;
+    border: 2px solid black;
+    border-radius: 10px;
+    margin-right: 5px;
+    margin-left: 5px;
+}
+
+.die-label {
+    width: 5vw;
+    display: inline;
+    margin-right: 2vw;
+    xoverflow-wrap: anywhere;
+    xtext-align: right;
+    position: absolute;
+    margin-top: 0;
+}
+
+.flex-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.game-title{
+    margin-top: 0vh;
+}
+
+img + .die-label {
+    margin-left: 5vw;
+}
+
+#doubles-roll-btn {
+    background-color: rgb(187, 8, 187);
+    width: 20vw;
+    padding: 15px;
+    margin: 10px auto;
+    border: 3px solid gray;
+    border-radius: 20px;
+}
+
+.hat {
+    height: 3vh;              
+    margin-left: .5vw;
+    margin-right: .5vw;
+}
+
+#message-box{
+    text-align: center;
+    font-weight: bold;
+    font-size: x-large;
+    margin-bottom: 5px;
+
+}
+
+#new-blank-rule{
+    background-color: white;
+    display: inline-block;
+    height: 100%;
+    padding: 5px 5px;
+    color: #161f27;
+    margin-right: 5px;
+}
+
+#new-item{
+    height: fit-content;
+    margin-top: 5px;
+}
+
+.player {
+    border: 1px solid gray;
+    border-radius: 10px;
+    padding: 10px;
+    color: #202b38;
+    background-color: white;
+    white-space: nowrap;
+
+}
+
+.player-pool {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+}
+
+#roll-btn {
+    color: #202b38;
+    background-color: rgb(214, 214, 0);
+    width: 20vw;
+    padding: 15px;
+    margin: 10px auto;
+    border: 3px solid gray;
+    border-radius: 20px;
+}
+
+#room-code{
+    color: yellow;
+    font-weight: bold;
+}
+
+#table{
+    xdisplay: flex;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    background-color: rgb(41, 23, 17);
+    width: 50vw;
+    height: 30vh;
+    border: 3px solid rgb(41, 23, 17);
+    border-radius: 5px;
+    align-self: center;
+}
+
+.ui-draggable-dragging {
+    width: 2vw;
+    border-radius: 3px;
+}
+
+.ui-droppable-active {
+    border: 2px dotted gray;
+}
+
+@media only screen and (max-width: 320px) {
+    /**/
+    details {
+        bottom: initial;
+    }
+}
+
+@media only screen and (max-height: 385px) {
+    /**/
+    details {
+        bottom: initial;
+    }
+}
+
+@media only screen and (max-width: 550px) {
+    .die {
+        border-radius: 5px;
+        width: 7vw;
+    }
+
+    .die-label {
+        font-size: x-small;
+        margin-right: 0vw;
+        width: 11vw;
+    }
+
+    h1 {
+        margin-top: 20vh;
+    }
+
+    .hat {
+        height: 2vh;
+    }
+
+    .dice-box{
+        height: 3vh;
+    }
+
+    #play {
+        margin-top: 2vh;
+    }
+
+    .player {
+        font-size: x-small;
+        padding: 7px;
+    }
+    #roll-btn {
+        width: 35vw;
+    }
+
+    #table {
+        width: 75vw;
+        height: 25vh;
+    }
+}
