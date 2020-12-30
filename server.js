@@ -10,10 +10,7 @@ var app = express();
 var server = http.Server(app);
 var io = socketIO(server);
 
-let port = process.env.PORT;
-if (port == null || port == ""){
-    port = 5000;
-}
+let port = process.env.PORT || 5000;
 
 app.set('port', port);
 app.use('/static', express.static(__dirname + '/static'));
@@ -21,18 +18,18 @@ app.use('/assets', express.static(__dirname + '/assets'));
 
 
 // Routing
-app.get('/', function(request, response) {
-    response.sendFile(path.join(__dirname, 'index.html'));
+app.get('/', function(req, res) {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/game', function(request, response) {
-    response.sendFile(path.join(__dirname, 'game.html'));
+app.get('/game', function(req, res) {
+    res.sendFile(path.join(__dirname, 'game.html'));
 });
 
 // Starts the server
 
 server.listen(port, function(){
-    console.log('Starting server (port 5000 on localhost)');
+    console.log(`Starting server on port ${port}`);
 });
 
 
@@ -187,123 +184,80 @@ io.on('connection', function(socket) {
         io.sockets.binary(false).emit(`new three man${data.gameID}`, {new3Man: games[data.gameID].players.threeMan});
     });
 
-    socket.on('doubles', function(data) {
-        games[data.gameID].doublesRollNum = games[data.gameID].doublesRollNum+1;
-        io.sockets.binary(false).emit(`new doubles${data.gameID}`, {});
+
+    //  DOUBLES ROLL LISTENTERS
+    socket.on('doubles', function(data){
+        console.log("in socket.on(doubles)");
+        games[data.gameID].doublesRollNum = 1; // initialize doubles counter in game data
+        io.sockets.binary(false).emit(`doubles spiral ${data.gameID}`, {}); // brodcast to all sockets to start doubles handling
     });
 
-    socket.on('increaseDoublesRollNum', function(data){
-        games[data.gameID].doublesRollNum = games[data.gameID].doublesRollNum+1;
+    socket.on('dice distributed', function(data){
+        console.log("socket.on(dice distributed)");
+        let idData = data;
+        console.log('tell clients to look for data');
+        console.log(`data: ${idData}`);
+        console.log(`doublesRollNum: ${games[data.gameID].doublesRollNum}`);
+        io.sockets.binary(false).emit(`look for dice${data.gameID}`, {data: idData, doublesRollNum: games[data.gameID].doublesRollNum});
     });
 
-    socket.on('clearDoublesRollNum', function(data){
+    
+    socket.on('doubles roll', function(newData) {
+        // increment counter after both die are rolled
+
+        console.log('211-->' + newData.roll);
+        console.log(games[newData.gameID].doublesData);
+        let game = games[newData.gameID];
+        let names = newData.name;
+        console.log(game);
+        console.log(newData);
+        
+        let topPositions;
+        let leftPositions;
+        let rotations;
+
+        game.pushDoublesDataRoll(newData.roll);
+        game.pushDoublesDataName(newData.name);
+        console.log("224-->" + game.doublesData);
+
+        [topPositions, leftPositions, rotations] = generatePositions(newData.roll.length, newData.gameID);
+
+        if (newData.roll.length === 2){ // one player has both dice
+            names[1] = names[0];
+            game.pushDoublesDataName(game.doublesData.names[0]);
+        }
+
+        io.sockets.binary(false).emit(`doubles die rolled${newData.gameID}`, {roll: newData.roll, names: names, ids: newData.ids, topPositions: topPositions, leftPositions: leftPositions, rotations: rotations});
+
+
+        if (game.doublesData.roll.length === 2){  // change if more than 2 die used
+            io.sockets.binary(false).emit(`all doubles dice rolled ${newData.gameID}`, {roll: game.doublesData.roll, names: game.doublesData.names, rtnRoll: newData.rtnRoll});
+            game.clearDoublesData();
+            games[newData.gameID].doublesRollNum++;  // increase game doubles counter
+            console.log("240-->" + game.doublesData);
+        }
+    });
+
+    socket.on('clear doubles roll num', function(data){
         games[data.gameID].doublesRollNum = 0;
     });
 
+    function generatePositions(numPositions, gameID){
+        console.log("in generatePositions");
+        let topPositions = [];
+        let leftPositions = [];
+        let rotations = [];
 
-
-
-    {
-        let roll=[];
-        let names=[];
-
-        socket.on('dice distributed', function(data){
-            let idData = data;
-            console.log('tell clients to look for data');
-            io.sockets.binary(false).emit(`look for dice${data.gameID}`, {data: idData, doublesRollNum: games[data.gameID].doublesRollNum});
-        });
-            
-        function generatePositions(numPositions, gameID){
-            let topPositions = [];
-            let leftPositions = [];
-            let rotations = [];
-
-            for (let i=0; i<numPositions; i++){
-                topPositions.push(Math.random());
-                leftPositions.push(Math.random());
-                rotations.push(Math.random());
-                games[gameID].pushDoublesDataTopPosition(topPositions[i]);
-                games[gameID].pushDoublesDataLeftPosition(leftPositions[i]);
-                games[gameID].pushDoublesDataRotation(rotations[i]);
-            }
-
-            return [topPositions, leftPositions, rotations];
+        for (let i=0; i<numPositions; i++){
+            topPositions.push(Math.random());
+            leftPositions.push(Math.random());
+            rotations.push(Math.random());
+            games[gameID].pushDoublesDataTopPosition(topPositions[i]);
+            games[gameID].pushDoublesDataLeftPosition(leftPositions[i]);
+            games[gameID].pushDoublesDataRotation(rotations[i]);
         }
 
-        socket.on('doubles roll', function(newData) {
-
-            console.log('235-->' + newData.roll);
-            console.log(games[newData.gameID].doublesData);
-            let game = games[newData.gameID];
-            let names = newData.name;
-            console.log(game);
-            console.log(newData);
-            
-            let topPositions;
-            let leftPositions;
-            let rotations;
-
-            game.pushDoublesDataRoll(newData.roll);
-            game.pushDoublesDataName(newData.name);
-            console.log("248-->" + game.doublesData);
-
-            [topPositions, leftPositions, rotations] = generatePositions(newData.roll.length, newData.gameID);
-
-            if (newData.roll.length === 2){ // player has both dice
-                names[1] = names[0];
-                game.pushDoublesDataName(game.doublesData.names[0]);
-            }
-
-            io.sockets.binary(false).emit(`doubles die rolled${newData.gameID}`, {roll: newData.roll, names: names, ids: newData.ids, topPositions: topPositions, leftPositions: leftPositions, rotations: rotations});
-
-
-            if (game.doublesData.roll.length === 2){
-                io.sockets.binary(false).emit(`new doubles roll finished${newData.gameID}`, {roll: game.doublesData.roll, names: game.doublesData.names, rtnRoll: newData.rtnRoll});
-                game.clearDoublesData();
-                console.log("263-->" + game.doublesData);
-            }
-        });
-
-        
-    }
-
-    {
-        let roll=[];
-        let names=[];
-
-        socket.on('dice returned roll', function(data) {
-            console.log('in dice returned roll');
-            console.log(data);
-
-            // copied from doubles roll
-            roll.push(...data.roll);
-            names.push(data.name);
-            console.log(names);
-            console.log(roll);
-
-            let topPositions;
-            let leftPositions;
-            let rotations;
-
-            [topPositions, leftPositions, rotations] = generatePositions(data.roll.length, data.gameID);
-
-            // 1 player has both dice
-            if (names.length === 1){
-                names[1] = names[0];
-            }
-
-            if (roll.length == 2){
-                io.sockets.binary(false).emit(`doubles die rolled${data.gameID}`, {roll: roll, names: names, ids: data.ids, topPositions: topPositions, leftPositions: leftPositions, rotations: rotations});
-                io.sockets.binary(false).emit(`doubles roll finished${data.gameID}`, {roll: roll, names: names, rtnRoll: data.rtnRoll});
-                roll = [];
-                names = [];
-                console.log(roll);
-                console.log(names);
-            }
-
-            names=[];
-            roll=[];
-        });
+        return [topPositions, leftPositions, rotations];
     }
 
     socket.on('new rule', function(data){

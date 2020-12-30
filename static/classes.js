@@ -213,8 +213,6 @@ class Game {
             leftPositions: [],
             rotations: []
         }
-        // can the dice live here?
-        //this.__dice = new Dice(2,6);
     }
 
     set code(code) {
@@ -287,12 +285,7 @@ class Game {
     }
 
     get doublesData(){
-        return `roll: ${this.__doublesData.roll},
-        names: ${this.__doublesData.names},
-        topPositions: ${this.__doublesData.topPositions},
-        leftPositions: ${this.__doublesData.leftPositions},
-        rotations: ${this.__doublesData.rotations},
-        __doublesRollNum:${this.__doublesData.__doublesRollNum}`;
+        return this.__doublesData;
     }
 
     clearDoublesData(){

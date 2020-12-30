@@ -28,7 +28,7 @@
                 document.onmousemove = function(e){
                     var x = e.pageX;
                     var y = e.pageY;
-                    e.target.title = "x: "+x+" y: "+y;
+                    e.target.title = `x: ${x}, y: ${y}`;
                 };
                 
                 var socket = io({reconnection: false});
@@ -495,116 +495,29 @@
                     });
 
                 /********************** PUT ALL NEW DOUBLES STUFF HERE *********************/
-                    socket.on(`new doubles${game}`, function(){
+                    socket.on(`doubles spiral ${game}`, function(){
+                        console.log('socket.on(doubles spiral)');
                         showMessage('add', 'Doubles!<br/>');
                         console.log(`doublesRollNum before increment: ${doublesRollNum}`);
-                        console.log('socket.on(new doubles)');
-                        // increment doubles roll count
-                        incrementDoublesRollNum();
+                        incrementDoublesRollNum(); // increment doubles roll count
                         console.log(`doublesRollNum after increment: ${doublesRollNum}`);
-
-                        // let rolling player distribute dice
-                        distributeDice();
                         
-                        // while doubles roll num > 0
-                            // check for dice
-                            // roll if dice are there
-
-                            // if dice don't match
-                                // clear doubles roll num and move on
-                            // else if dice match, 
-                                // increment doubles roll count
-                                // if doubles roll num mod 2 == 0
-                                    // return dice to rolling player
-                                // else let player distribute
-                        
+                        allowDiceDistribution();  // let rolling player distribute dice
                     });
 
-                    socket.on(`new doubles roll finished${game}`, function(){
-                        console.log('socket.on(doubles roll finished)');
-                        console.log(roll);
-                        showMessage('clear');
-
-                            // if dice don't match
-                                // clear doubles roll num and move on
-                            if (roll[0] !== roll[1]){    // dice don't match
-                                console.log('cont-->' + cont);
-                                showMessage('change', `Drink!`);                                
-                                console.log(players.currentPlayer.id);
-                                console.log(socket.id);
-                                if(players.currentPlayer.id === socket.id){
-                                    console.log("let player keep rolling");
-                                    $('#roll-btn').show();
-                                    doubles = false;
-                                    clearDoublesRollNum();
-                                    return;
-                                }
-                            } else {
-                                console.log('DO SOMETHING HERE IF THE DICE DO MATCH')
-                            }
-                        
-                    });
-
-
-                    function incrementDoublesRollNum(){
-                        console.log('increasing doublesRollNum');
-                        doublesRollNum++;
-                        socket.binary(false).emit('increaseDoublesRollNum', {gameID: game});
-                    }
-
-                    function clearDoublesRollNum(){
-                        console.log('clearing doublesRollNum');
-                        doublesRollNum = 0;                        
-                        socket.binary(false).emit('clearDoublesRollNum', {gameID: game});
-                    }
-
-                    function distributeDice(){
-                        // set dice draggable to true let player drag copy of dice to boxes
-                        console.log(`id of current player: ${players.currentPlayer.id}`);
-                        console.log(`this socket ${socket.id}`);
-                        if (players.currentPlayer.id == socket.id){
-                            $('.die').draggable("option", "disabled", false);
-                            console.log($('#roll-btn'));
-                            $('#roll-btn').hide();  
-
-                        }
-                        
-                    }
-                /*********************** END OF NEW DOUBLES STUFF ***************************/
-
-                    socket.on(`doubles${game}`, function(data){
-                        console.log(`doublesRollNum: ${doublesRollNum}`);
-                        console.log('socket.on(doubles)');
-                        // set dice draggable to true let player drag copy of dice to boxes
-                        // fix so you can't give yourself dice
-                        console.log(players.currentPlayer.id);
-                        console.log(socket.id);
-                        if (players.currentPlayer.id == socket.id){
-                            $('.die').draggable("option", "disabled", false);
-                            console.log($('#roll-btn'));
-                            $('#roll-btn').hide();  // this is being undone by the state update
-
-                        }
-                        showMessage('add', 'Doubles!<br/>');
-                        //$('#message-box').append('Doubles!<br/>');
-                        doublesRollNum+=1;
-
-                    });
-
-                    // KEEP
                     socket.on(`look for dice${game}`, function(rtnData){                     
-                        console.log('socket.on(look for dice)');
-                        //this is lazy but it might work
+                        console.log('in socket.on(look for dice)');
                         if (doublesRollNum === 0){  // player joined late and is looking for dice after doubles was rolled
-                            //render dice
                             doublesRollNum = rtnData.doublesRollNum;
                         }
+
                         console.log(rtnData);
                         console.log(rtnData.data.rtnRoll);
                         console.log(`doublesRollNum in look for dice: ${doublesRollNum}`);
+
+                        // display dice in boxes
                         $('.die-label').remove();
-                        if (doublesRollNum % 2 === 1){
-                            // if distributed by current player
+                        if (doublesRollNum % 2 === 1){ // if distributed by current player
                             for (let i=0; i<rtnData.data.locs.length; i++){
                                 console.log(i);
                                 console.log(`${rtnData.data.locs[i]}`);
@@ -615,87 +528,40 @@
                                 $(`#die${i+1}`).css('left', '');
                                 $(`#die${i+1}`).css('top', '');
                             }
-                        } else {
-                            ; // dice were returned - this is handled elsewhere
-                        }
+                        } 
 
-                        if ($(`#${socket.id}-box`).children().length > 0){
+                        if ($(`#${socket.id}-box`).children().length > 0){ // there is at least one die in the current player's box
                             $('#doubles-roll-btn').show(); 
                         }
 
                     });
 
-                    // KEEP
-                    $('#doubles-roll-btn').click(() => {
-                        console.log('#doubles-roll-btn.click()');
-                            $('#doubles-roll-btn').hide();
-                            console.log(socket.id);
-                            let doublesDice = new Dice($(`#${socket.id}-box`).children().length,6);
-                            console.log($(`#${socket.id}-box`).children().length);
-                            console.log($(`#${socket.id}-box`).children());
-                            let ids = [];
-                            let box = $(`#${socket.id}-box`).children();
-                            
-                            for (let i = 0; i<box.length; i++){
-                                console.log(box[i].id);
-                                ids.push(box[i].id);
-                            }
-                            
-                            console.log(ids);
-
-                            let roll = doublesDice.roll();
-                            //let roll = [3,3];
-                            console.log(roll);
-                            
-                            if (doublesRollNum % 2 === 0) {
-                                console.log('original player re-roll');
-                                socket.binary(false).emit('dice returned roll', {roll: roll, gameID: game, name: [name], ids: ids});
-                                // for testing only
-                                //socket.emit('dice returned roll', {roll: [3], gameID: game, name: name});
-                                //socket.emit('dice returned roll', {roll: [3], gameID: game, name: name});
-                            } else {
-                                console.log('line 287 - another doubles roll');
-                                socket.binary(false).emit('doubles roll', {roll: roll, gameID: game, name: [name], ids: ids});
-                            }
-
-                        });
-
-                    // KEEP
                     socket.on(`doubles die rolled${game}`, function(roll){
-                        console.log('socket.on(doubles die rolled)');
+                        console.log('in socket.on(doubles die rolled)');
                         console.log(roll);
 
                         displayDoublesDice(roll.roll, [roll.topPositions, roll.leftPositions], roll.rotations, roll.names, roll.ids);
-                    });    
-
-                    // 
-                    socket.on(`doubles roll finished${game}`, function(roll){
-                        console.log('socket.on(doubles roll finished)');
+                    });  
+                    
+                    socket.on(`all doubles dice rolled ${game}`, function(roll){
+                        console.log('socket.on(all doubles dice rolled)');
+                        $('#doubles-roll-btn').hide();  // hide doubles roll button for everyone
                         console.log(roll);
+                        incrementDoublesRollNum(); // increase local game doublesRollNum
+                        console.log(`doublesRollNum: ${doublesRollNum}`);
                         showMessage('clear');
 
                         if (roll.roll[0] === roll.roll[1]){  // also change this if more dice can be used
-                            // current player rolls again - if doubles again, 
-                            
+                            // both dice match          
+                            console.log("both dice match");                  
                             console.log(roll.roll);
-                            //console.log(roll.roll[1]);
                             console.log(players.currentPlayer.id);
                             console.log(roll);
                             console.log(roll.rtnRoll);
-                            console.log(`doublesRollNum: ${doublesRollNum}`);
-                            if (doublesRollNum % 2 === 0){
-                                console.log('safe!');
-                                if (players.currentPlayer.id == socket.id){
-                                    console.log($('.die'));
-                                    //$('.die').draggable("option", "disabled", false); // not working, will try to use die1 and die2 for now
-                                    $('#die1').draggable("option", "disabled", false);
-                                    $('#die2').draggable("option", "disabled", false);
-                                    $('#doubles-roll-btn').hide();
-                                }
-
-                            } else {
-                                setTimeout(function(){//place dice back in current player box 
-                                    // THIS IS NOT WORKING 6/23
+                            if (doublesRollNum % 2 === 0){ // not dice return roll
+                                // give dice back to current player
+                                console.log("not dice return roll");
+                                setTimeout(function(){
                                     $(`#${players.currentPlayer.id}-box`).append($(`#die1`)); 
                                     $(`#${players.currentPlayer.id}-box`).append($(`#die2`)); 
                                     $(`#die1`).css('left');
@@ -710,24 +576,78 @@
                                         $('#doubles-roll-btn').show();
                                     }
                                 }, 1500);
+
+
+                            } else { 
+                                console.log("dice return roll");
+                                // current player re-rolled in doubles spiral
+                                allowDiceDistribution();
                             }
                             
                         } else {
+                            console.log("dice don't match");
                             console.log(cont);
                             showMessage('change', `Drink!`);
                             // $('#message-box').text(`Drink!`);
                             if(players.currentPlayer.id === socket.id){
-                                //console.log('continue!');
                                 $('#roll-btn').show();
                                 doubles = false;
                                 doublesRollNum = 0;
+                                socket.binary(false).emit('clear doubles roll num', {gameID: game});
                                 return;
                             }
                         }
 
-                        doublesRollNum += 1;
+                    });
+
+                    $('#doubles-roll-btn').click(() => {
+                        console.log('in #doubles-roll-btn.click()');
+                        $('#doubles-roll-btn').hide();
+                        console.log(socket.id);
+                        let doublesDice = new Dice($(`#${socket.id}-box`).children().length,6);
+                        console.log($(`#${socket.id}-box`).children().length);
+                        console.log($(`#${socket.id}-box`).children());
+                        let ids = [];
+                        let box = $(`#${socket.id}-box`).children();
+                        
+                        for (let i = 0; i<box.length; i++){ // loop through dice in box
+                            console.log(box[i].id);
+                            ids.push(box[i].id);
+                        }
+                        
+                        console.log(ids);
+
+                        let roll = doublesDice.roll();
+                        //let roll = [3,3];
+                        console.log(roll);
+                        
+                        console.log('another doubles roll');
+                        socket.binary(false).emit('doubles roll', {roll: roll, gameID: game, name: [name], ids: ids});
 
                     });
+
+                    function incrementDoublesRollNum(){
+                        console.log('in increasingDoublesRollNum()');
+                        doublesRollNum++;
+                        // socket.binary(false).emit('increaseDoublesRollNum', {gameID: game});  // this will increase it by the number of players in the game - bad
+                    }
+
+                    function allowDiceDistribution(){
+                        console.log('in distributeDice()');
+                        // set dice draggable to true let player drag copy of dice to boxes
+                        console.log(`id of player distributing dice: ${players.currentPlayer.id}`);
+                        console.log(`id of this socket ${socket.id}`);
+                        if (players.currentPlayer.id == socket.id){
+                            console.log($('.die'));
+                            $('.die').draggable("option", "disabled", false);
+                            console.log($('#roll-btn'));
+                            $('#roll-btn').hide();  
+
+                        }
+                        
+                    }
+
+                /*********************** END OF NEW DOUBLES STUFF ***************************/
 
                     $(window).on('beforeunload', (event) => {
                         console.log("unloading2");
@@ -774,7 +694,7 @@
                             doubles=true;
                             cont += 1;
                             console.log('doubles');
-                            socket.binary(false).emit('doubles', {gameID: game});  // changed to new path 10/5
+                            socket.binary(false).emit('doubles', {gameID: game});  // changed to new path 12/30
                             
                         }
                         
@@ -913,6 +833,12 @@
                     //$(`#die-label${j}`).css('top', `${top+$(`#die-label${j}`).height()}px`);
                     $(`#die-label${j}`).css('top', `${top+dieWidthAdjustment}px`);
                     $(`#die-label${j}`).css('position', `absolute`);
+
+                    $('.die').draggable({
+                        revert: 'invalid',
+                        cursorAt: {top: 0, left: 0},
+                        disabled: true
+                    });
                 
                 }
                     
@@ -920,6 +846,7 @@
 
             function getRandomLoc(leftOrTopBound, rangeSize, randNum){
                     //let rand = Math.random();
+                    console.log("in getRandomLoc()");
                     let rand = randNum;
                     rand = rand*rangeSize;
                     console.log(leftOrTopBound + rand);
@@ -927,6 +854,7 @@
             }
 
             function clearTable(){
+                console.log("in clearTable()");
                 $('.die').remove();
                 $('.die-label').remove();
             }
