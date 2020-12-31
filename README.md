@@ -4,7 +4,7 @@
 
 This is a basic, online version of the dice-based 3 Man drinking game that allows people to play together remotely. 
 
-[Link to game](http://thawing-coast-09087.herokuapp.com/)
+[Link to game](http://www.3mangame.com/)
 
 
 ## To play:
