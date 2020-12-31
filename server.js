@@ -1,4 +1,5 @@
 // Dependencies
+const { Console } = require('console');
 var express = require('express');
 var http = require('http');
 var path = require('path');
@@ -36,6 +37,7 @@ server.listen(port, function(){
 
 
 var games = new Array(10);
+console.log(games.length);
 games[0] = [];
 
 
@@ -95,6 +97,8 @@ io.on('connection', function(socket) {
                 games[0].push(Number(code));
                 return code;
             }
+
+            return -1;
         }
     }
 

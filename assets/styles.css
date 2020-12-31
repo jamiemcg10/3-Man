@@ -212,7 +212,6 @@ img + .die-label {
 }
 
 #table{
-    xdisplay: flex;
     position: relative;
     align-items: center;
     justify-content: center;
@@ -231,6 +230,11 @@ img + .die-label {
 
 .ui-droppable-active {
     border: 2px dotted gray;
+}
+
+.warning {
+    margin: auto;
+    width: fit-content;
 }
 
 @media only screen and (max-width: 320px) {

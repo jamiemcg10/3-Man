@@ -52,20 +52,27 @@
 
                     id = socket.id;
                     name = $('#name').val();
-                    $('.flex-container').children().remove();
                     socket.binary(false).emit('get code', socket.id);
                 });
 
                 socket.on('new game code', function(data){
+                    console.log(data);
                     if (data.id === id){
                         code = data.code;
-                        game = String(code)[0];
+                        if (code === -1){
+                            $('.warning').remove();
+                            $('.flex-container').after('<div class="warning">Sorry, all rooms are currently full</div>');
 
-                        // enter waiting room here - need to continue to display code somehow
-                        socket.binary(false).emit('add to waiting room', {code: data.code, gameID: game, id: id, name: name});
-                        inWaitingRoom = true;
-                        
-                        displayWaitingRoom(game);
+                        } else {                            
+                            $('.flex-container').children().remove();
+                            game = String(code)[0];
+
+                            // enter waiting room here - need to continue to display code somehow
+                            socket.binary(false).emit('add to waiting room', {code: data.code, gameID: game, id: id, name: name});
+                            inWaitingRoom = true;
+
+                            displayWaitingRoom(game);
+                        }
 
                     }
                     
@@ -89,7 +96,7 @@
 
                     if ($('#code').val() === ""){
                         $('.warning').remove();
-                        $('.flex-container').append('<div class="warning">Please enter a code</div>')
+                        $('.flex-container').after('<div class="warning">Please enter a code</div>');
                         return false;
                     }
                     
@@ -136,7 +143,7 @@
                         }
                         else if (code.requestingID === id) {
                             $('.warning').remove();
-                            $('.flex-container').append('<div class="warning">The code you entered is invalid.</div>')
+                            $('.flex-container').after('<div class="warning">The code you entered is invalid</div>')
 
                         }
 
