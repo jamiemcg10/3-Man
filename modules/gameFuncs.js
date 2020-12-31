@@ -1,5 +1,4 @@
 function generatePositions(numPositions){
-    console.log("in generatePositions");
     let topPositions = [];
     let leftPositions = [];
     let rotations = [];
