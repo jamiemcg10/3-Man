@@ -11,9 +11,6 @@ class PlayerPool {
     }
 
     static PlayerPool(obj){
-        // should really throw an error if an incompatible object is passed in
-        console.log(obj);
-        console.log(obj.players);
         //console.log(obj.players.people.players);
         let newPP = new PlayerPool(obj.players.people.players);
         newPP.head = obj.players.people.stackHead;

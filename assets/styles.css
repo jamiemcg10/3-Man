@@ -124,8 +124,6 @@ button:disabled {
     width: 5vw;
     display: inline;
     margin-right: 2vw;
-    xoverflow-wrap: anywhere;
-    xtext-align: right;
     position: absolute;
     margin-top: 0;
 }
@@ -245,7 +243,6 @@ img + .die-label {
 }
 
 @media only screen and (max-height: 385px) {
-    /**/
     details {
         bottom: initial;
     }

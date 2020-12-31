@@ -30,6 +30,7 @@ class Dice {
     }
 
     roll(){
+        // roll dice - set sum and return value of roll
         let roll = [];
         for (let i = 0; i < this.number_of_die; i++){
             roll.push((Math.floor((Math.random() * 100)) % this.sides) + 1);
