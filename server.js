@@ -3,7 +3,8 @@ var express = require('express');
 var http = require('http');
 var path = require('path');
 var socketIO = require('socket.io');
-var classes = require('./static/classes.js');
+var Game = require('./modules/Game.js');
+var PlayerPool = require('./modules/PlayerPool.js');
 
 
 var app = express();
@@ -14,6 +15,7 @@ let port = process.env.PORT || 5000;
 
 app.set('port', port);
 app.use('/static', express.static(__dirname + '/static'));
+app.use('/modules', express.static(__dirname + '/modules'));
 app.use('/assets', express.static(__dirname + '/assets'));
 
 
@@ -44,9 +46,8 @@ io.on('connection', function(socket) {
         // do when player joins
         if (games[data.gameID] == null) {
             console.log('adding to empty game');
-            let pp = new classes.PlayerPool([new classes.Player(data.name, data.id)]);
-            //console.log(pp);
-            games[data.gameID] = new classes.Game(pp);
+            let pp = new PlayerPool.PlayerPool([new PlayerPool.Player(data.name, data.id)]);
+            games[data.gameID] = new Game(pp);
             // move this next line when everyone joins the room at the same time
             console.log(games[data.gameID].players.currentPlayer.id);
             io.sockets.binary(false).emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
@@ -54,7 +55,7 @@ io.on('connection', function(socket) {
             console.log('before');
             console.log(games[data.gameID].players.list);
             console.log('adding to existing game');
-            games[data.gameID].players.addPlayer(new classes.Player(data.name, data.id));
+            games[data.gameID].players.addPlayer(new PlayerPool.Player(data.name, data.id));
             console.log('after');
             console.log(games[data.gameID].players.list);
         }
@@ -115,7 +116,7 @@ io.on('connection', function(socket) {
     socket.on('new player', function(data){
         // do when player joins
         console.log(data);
-        games[data.gameID].players.addPlayer(new classes.Player(data.name, socket.id));
+        games[data.gameID].players.addPlayer(new PlayerPool.Player(data.name, socket.id));
         io.sockets.binary(false).emit(`new player${data.gameID}`, {name: data.name, id: data.id});
     });
 
@@ -131,7 +132,6 @@ io.on('connection', function(socket) {
                                         rotations: rotations};
 
 
-        //io.sockets.binary(false).emit(`roll${data.gameID}`, data);
         io.sockets.binary(false).emit(`roll${data.gameID}`, {roll: data.roll, topPositions: topPositions, leftPositions: leftPositions, rotations: rotations});
 
     });
@@ -260,6 +260,9 @@ io.on('connection', function(socket) {
         return [topPositions, leftPositions, rotations];
     }
 
+    socket.on('player making rule', function(data){
+        io.sockets.binary(false).emit(`player making rule${data.gameID}`, {name: data.name})
+    });
     socket.on('new rule', function(data){
         console.log(data);
         io.sockets.binary(false).emit(`new rule${data.gameID}`, {rule: data.ruleText});
@@ -275,7 +278,6 @@ io.on('connection', function(socket) {
                 
                 games[data.gameID].players.removePlayer(data.id);                
                 console.log(games[data.gameID].players.currentPlayer);
-                //games[data.gameID].players.nextPlayer();
                 console.log(games[data.gameID].players.currentPlayer);
                 io.sockets.binary(false).emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
                 // kill any doubles rolls happening
@@ -287,8 +289,6 @@ io.on('connection', function(socket) {
             }
             
             
-            //console.log(game);
-            //console.log(games[data.gameID].players.list.length);
             console.log(games[data.gameID].players.list.length);
             if (games[data.gameID].players.list.length === 0){
                 games[data.gameID] = null;
@@ -303,7 +303,6 @@ io.on('connection', function(socket) {
                     games[0][games[0].indexOf(codeToRemove)] = null;
                 }
                 console.log(`ACTIVE GAME CODES: ${games[0]}`);
-                //io.sockets.close();
             }
 
             io.sockets.binary(false).emit(`remove player${data.gameID}`, {id: data.id});

@@ -11,10 +11,13 @@
         <link rel="icon" href="/assets/dice-favicon.png">
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="/socket.io/socket.io.js"></script>
-        <script src="/static/classes.js"></script>
+        <script src="./modules/Dice.js"></script>
+        <script src="./modules/PlayerPool.js"></script>
+        <script src="./modules/Game.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
         <script src="static/jquery.ui.touch-punch.min.js"></script>
         <script>
+            
             let houseRules = '<details><summary>House Rules</summary>' +
                                                     '<ul id="rules-list"><li>Roll a 7, the player ahead of/after you drinks</li>' + 
                                                          '<li>Roll an 11, the player behind/before you drinks</li>' + 
@@ -48,7 +51,6 @@
                     }
                     id = socket.id;
                     name = $('#name').val();
-                    //$('div').remove();
                     $('.flex-container').children().remove();
                     socket.binary(false).emit('get code', socket.id);
                     console.log(socket.id);
@@ -59,9 +61,7 @@
                 socket.on('game code', function(data){
                     if (data.id === id){
                         console.log(data);
-                        //let code = data.code;
                         code = data.code;
-                        //let game = String(code)[0];
                         game = String(code)[0];
                         console.log(code);
                         console.log(data.code);
@@ -89,7 +89,6 @@
                     }
                     console.log($('#code').val());
                     id = socket.id;
-                    //let code = $('#code').val();
                     code = $('#code').val();
                     game = String(code)[0];
                     name = $('#name').val();
@@ -112,8 +111,6 @@
                             } else { // game has started
                                 socket.binary(false).emit('new player', {name: name, id: socket.id, gameID: game});
                                 renderGamePage();
-                                //can this be the actual roll?
-                                //displayDice([6,6],[[0.25,0.75],[0.9,0.1]],[0.5,0.5]);
                                 inGame = true;
                                 socket.binary(false).emit('get game data', {gameID: game});
                                 let gameData;
@@ -173,7 +170,6 @@
                         console.log(event);
                         console.log(event.target.clientHeight);
                     });
-                    console.log('changes registering');
 
                     $('#play').click(() => {
                         console.log('#play.click()');
@@ -217,7 +213,6 @@
                         socket.binary(false).emit('remove player', {gameID: roomNo, id: socket.id, code: code, removeID: 1});
                         socket.close();
                     });
-                    //return null;
                 }
 
 
@@ -251,6 +246,7 @@
                     let doublesRollNum = 0;
                     let hasJoinedLate;
                     let drinkIndicator;
+                    let makingRule = false;
 
                     players.list.forEach((player) => {
                         $('.player-pool').append(`<div class="player-container" id="${player.__id}-container"><div class="player" id="${player.__id}">${player.__name}</div><div class="dice-box" id="${player.__id}-box"></div></div>`);
@@ -311,12 +307,12 @@
                     showMessage('clear');
 
                     if (joiningLate){
-                         hasJoinedLate = true;
+                        hasJoinedLate = true;
                     } 
 
                     if (hasJoinedLate){
-                            socket.binary(false).emit('three man the hard way', {gameID: game});
-                            hasJoinedLate = false;
+                        socket.binary(false).emit('three man the hard way', {gameID: game});
+                        hasJoinedLate = false;
                         }
 
                     $('#roll-btn').click(() => {
@@ -326,21 +322,6 @@
                         console.log($('#table').offset());
                         socket.binary(false).emit('roll', {roll: roll, gameID: game});
                         console.log($('#table').offset());
-                        checkDice(roll);
-
-                        console.log(doubles);
-                        console.log(cont);
-                        if (cont === 0 & !doubles){
-                            console.log("cont === 0 & !doubles");
-                            socket.binary(false).emit('turn complete', {gameID: game});
-                        } else if (cont % 5 === 0 & cont !== 0) { // change to 5 after testing
-                            // made someone drink 5 times in a row - make a rule
-                            $('#roll-btn').hide();
-                            showMessage('add', `${name} makes a rule!`);
-                            $('details').attr('open', true);
-                            $('#rules-list').append('<li id="new-item"><input type="text" id="new-blank-rule"><button id="add-rule">Add</button></li>');
-                            
-                        }
 
                         console.log('end of roll.click()');
                     
@@ -349,12 +330,20 @@
                     $(document).on('click', '#add-rule', function(){
                         let newRule = $('#new-blank-rule').val();
                         if (newRule === ''){
-                            ;// TODO make box flash or something
+                            $('#new-blank-rule').css("outline", "auto");
+                            $('#new-blank-rule').css("outline-color", "red");
+                            setTimeout(function(){
+                                $('#new-blank-rule').css("outline", "initial");
+                            }, 250);
                         } else {
                             $('#new-item').remove();
                             socket.binary(false).emit('new rule', {gameID: game, ruleText: newRule});
                             if (doubles === false){
                                 $('#roll-btn').show();
+                            } 
+                            makingRule = false;
+                            if (doubles === true){
+                                $('.die').draggable("option", "disabled", false);
                             }
                         }
                     });
@@ -362,13 +351,13 @@
                     socket.on(`new rule${game}`, function(rule){
                         console.log(rule);
                         $('#rules-list').append(`<li class='player-created'>${rule.rule}</li>`);
-                        $('details').attr('open', true);
+                        showMessage('add', `New rule: ${rule.rule}<br/>`);
                     });
 
                     socket.on(`new player${game}`, function(player){
                             // add to player pool copy as well?
                             console.log(player);
-                            players.addPlayer(new Player(player.name, player.id));
+                            players.addPlayer(new PlayerPool.Player(player.name, player.id));
                             $('.player-pool').append(`<div class="player-container" id="${player.id}-container"><div class="player" id="${player.id}">${player.name}</div><div class="dice-box" id="${player.id}-box"></div></div>`);
                             $('.dice-box').droppable({
                             drop: function(event, ui){
@@ -376,10 +365,6 @@
                                 console.log(event);
                                 console.log(event.originalEvent);
                                 console.log(ui);
-                                // console.log(event.target.id);
-                                // console.log(event.originalEvent.target.id);
-                                // //targets.push(`#${event.target.id}`);
-                                // targets.push(`#${event.originalEvent.target.id}`);
 
                                 targets.push(`#${event.target.id}`);
                                 ids.push(`#${ui.draggable[0].id}`);
@@ -387,11 +372,7 @@
                                 console.log(`#${event.originalEvent.target.id}`);
                                 console.log(ui.draggable[0].id);
 
-                                $(`#${event.target.id}`).append($(`#${ui.draggable[0].id}`));  
-
-                                // $(`#${event.originalEvent.target.id}`).css('position', '');
-                                // $(`#${event.originalEvent.target.id}`).css('left', '');
-                                // $(`#${event.originalEvent.target.id}`).css('top', '');                   
+                                $(`#${event.target.id}`).append($(`#${ui.draggable[0].id}`));                
 
                                 $(`#${ui.draggable[0].id}`).css('position', '');
                                 $(`#${ui.draggable[0].id}`).css('left', '');
@@ -453,11 +434,35 @@
                     socket.on(`roll${game}`, function(roll){
                         console.log('socket.on(roll)');
                         console.log(roll);
-                        //$('#message-box').text(' ');
                         clearTable();
                         console.log($('#table').offset());
                         displayDice(roll.roll, [roll.topPositions, roll.leftPositions], roll.rotations); 
                         showMessage('clear');
+
+                        if (socket.id === players.currentPlayer.id){  // moved from on roll.click()
+                            checkDice(roll.roll);
+
+                            if (cont === 0 & !doubles){
+                                console.log("cont === 0 & !doubles");
+                                socket.binary(false).emit('turn complete', {gameID: game});
+                            } else if (cont % 5 === 0 & cont !== 0) { // change to 5 after testing
+                                // made someone drink 5 times in a row - make a rule
+                                console.log(doubles);
+                                $('#roll-btn').hide();
+                                socket.binary(false).emit('player making rule', {gameID: game, name: name});
+                                $('details').attr('open', true);
+                                $('#rules-list').append('<li id="new-item"><input type="text" id="new-blank-rule"><button id="add-rule">Add</button></li>');
+                                makingRule=true;
+                                if (doubles === true){
+                                    $('.die').draggable("option", "disabled", true);
+                                }
+                            }
+                        }
+                    });
+
+                    socket.on(`player making rule${game}`, function(data){
+                        console.log("in socket.on(player making new rule");
+                        showMessage('add', `${data.name} makes a rule!<br/>`);
                     });
 
                     socket.on(`drink${game}`, function(data){
@@ -479,8 +484,7 @@
                         drinkIndicator = window.setTimeout(function() {
                             $(`#${data.id}`).css('background-color', originalColor);
                         }, 1500);
-                        //$('#message-box').append(`${data.name} Drinks!<br/>`);
-                        showMessage('add', `${data.name} Drinks!<br/>`);
+                        showMessage('add', `${data.name} drinks!<br/>`);
                     });
 
                     socket.on(`new three man${game}`, function(data){
@@ -489,7 +493,6 @@
                         console.log(data);
                         console.log(data.new3Man.__id);
                         $(`#${data.new3Man.__id}`).append('<img class="hat" src="/assets/PinClipart.com_jester-clipart_195101.png">');
-                        //$('#message-box').append(`${data.new3Man.__name} is the new 3 Man!<br/>`);
                         showMessage('clear'); // not sure if this is needed, but 2 3 man messages shouldn't show at the same time
                         showMessage('add', `${data.new3Man.__name} is the new 3 Man!<br/>`);
                     });
@@ -588,7 +591,6 @@
                             console.log("dice don't match");
                             console.log(cont);
                             showMessage('change', `Drink!`);
-                            // $('#message-box').text(`Drink!`);
                             if(players.currentPlayer.id === socket.id){
                                 $('#roll-btn').show();
                                 doubles = false;
@@ -618,7 +620,6 @@
                         console.log(ids);
 
                         let roll = doublesDice.roll();
-                        //let roll = [3,3];
                         console.log(roll);
                         
                         console.log('another doubles roll');
@@ -629,7 +630,6 @@
                     function incrementDoublesRollNum(){
                         console.log('in increasingDoublesRollNum()');
                         doublesRollNum++;
-                        // socket.binary(false).emit('increaseDoublesRollNum', {gameID: game});  // this will increase it by the number of players in the game - bad
                     }
 
                     function allowDiceDistribution(){
@@ -639,7 +639,9 @@
                         console.log(`id of this socket ${socket.id}`);
                         if (players.currentPlayer.id == socket.id){
                             console.log($('.die'));
-                            $('.die').draggable("option", "disabled", false);
+                            if (!makingRule){
+                                $('.die').draggable("option", "disabled", false);
+                            }
                             console.log($('#roll-btn'));
                             $('#roll-btn').hide();  
 
@@ -664,52 +666,52 @@
                     function checkDice(roll) { 
                         console.log("in checkDice()");
                         console.log($('#table').offset());
-                        if (dice.rollTotal === 7){
-                            console.log(7);
-                            // tell the server that someone has to drink
-                            socket.binary(false).emit('ahead', {gameID: game});
-                            cont += 1;
-                        }
 
-                        if (dice.rollTotal === 11){
-                            console.log(11);
-                            socket.binary(false).emit('behind', {gameID: game});
-                            cont += 1;
+                        if (dice.rollTotal !== 7 & dice.rollTotal !== 11 & !roll.includes(3) & roll[0] !== roll[1]){
+                            cont = 0;
+                            $('#roll-btn').hide();
+                            console.log(`cont: ${cont}`);
+                            return;
                         }
 
                         if (dice.rollTotal === 3){
                             console.log(3);
                             socket.binary(false).emit('three man the hard way', {gameID: game, id: socket.id});
                             console.log('end of dice.rollTotal === 3');
+                            return;
                         }
+
+                        if (dice.rollTotal === 7){
+                            console.log(7);
+                            // tell the server that someone has to drink
+                            socket.binary(false).emit('ahead', {gameID: game});
+                        }
+
+                        if (dice.rollTotal === 11){
+                            console.log(11);
+                            socket.binary(false).emit('behind', {gameID: game});
+                        }                        
 
                         if (roll.includes(3)){
                             console.log('3 on a die');
                             socket.binary(false).emit('three man', {gameID: game});
-                            cont += 1;
                         }
 
                         // test for doubles - needs to change if more dice are allowed
                         if (roll[0] === roll[1]){
                             doubles=true;
-                            cont += 1;
                             console.log('doubles');
-                            socket.binary(false).emit('doubles', {gameID: game});  // changed to new path 12/30
+                            socket.binary(false).emit('doubles', {gameID: game}); 
                             
                         }
                         
-                        if (dice.rollTotal !== 7 & dice.rollTotal !== 11 & !roll.includes(3) & roll[0] !== roll[1]){
-                            cont = 0;
-                            $('#roll-btn').hide();
-                        }
-
+                        cont += 1;
                         console.log(`cont: ${cont}`);
                     };
 
 
                     function showMessage(action, message){
                         console.log("in showMessage()");
-                        console.log(message);
                         if (action === 'change') {
                             $('#message-box').text(message);
                         } else if (action === 'add') {
@@ -761,7 +763,6 @@
                         console.log(`#die${i}`);
                         console.log(diceText);
                         console.log(`${diceText[i-1]}`);
-                        //$(`#table`).append(`<p class="die-label">${diceText[i-1]}</p>`);
                         $('#table').append(`<p class="die-label" id="die-label${i}">${diceText[i-1]}</p><img src="./assets/${die}.png" class="die" id="die${i}">`);  
                     }
 
@@ -830,7 +831,6 @@
                     console.log(`$(#die-label${j}).css('top', ${top}+$(#die-label${j}).height()}px)`);
                     console.log(`$(#die-label${j}).css('position', absolute)`);
                     $(`#die-label${j}`).css('left', `${left}px`);
-                    //$(`#die-label${j}`).css('top', `${top+$(`#die-label${j}`).height()}px`);
                     $(`#die-label${j}`).css('top', `${top+dieWidthAdjustment}px`);
                     $(`#die-label${j}`).css('position', `absolute`);
 
@@ -845,7 +845,6 @@
             }
 
             function getRandomLoc(leftOrTopBound, rangeSize, randNum){
-                    //let rand = Math.random();
                     console.log("in getRandomLoc()");
                     let rand = randNum;
                     rand = rand*rangeSize;
