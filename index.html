@@ -16,8 +16,9 @@
         <script src="./modules/Game.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
         <script src="static/jquery.ui.touch-punch.min.js"></script>
-        <script>
-            
+        <script type="module">
+            import { nameIsBlank, renderGamePage } from './modules/gameEntry.js';
+
             let houseRules = '<details><summary>House Rules</summary>' +
                                                     '<ul id="rules-list"><li>Roll a 7, the player ahead of/after you drinks</li>' + 
                                                          '<li>Roll an 11, the player behind/before you drinks</li>' + 
@@ -43,28 +44,22 @@
                 let name;
                 let playersInGame;
                 let loaded = false;
-                
 
                 $('#start').click(() => {
-                    if ($('#name').val() === ""){
+                    if (nameIsBlank()){
                         return false;
                     }
+
                     id = socket.id;
                     name = $('#name').val();
                     $('.flex-container').children().remove();
                     socket.binary(false).emit('get code', socket.id);
-                    console.log(socket.id);
-                    console.log(id);
-                    console.log(`code${id}`);
                 });
 
-                socket.on('game code', function(data){
+                socket.on('new game code', function(data){
                     if (data.id === id){
-                        console.log(data);
                         code = data.code;
                         game = String(code)[0];
-                        console.log(code);
-                        console.log(data.code);
 
                         // enter waiting room here - need to continue to display code somehow
                         socket.binary(false).emit('add to waiting room', {code: data.code, gameID: game, id: id, name: name});
@@ -76,23 +71,32 @@
                     
                 });
 
+                $(document).on("keyup", function(event){
+                    if (event.key === "Enter"){
+                        if ($('#code').val() === ''){
+                            $('#start').trigger("click");
+                        } else {
+                            $('#join').trigger("click");
+                        }
+                    }
+                });
 
 
                 $('#join').click(() => {
-                    if ($('#name').val() === ""){
+                    if (nameIsBlank()){                        
                         return false;
                     }
+
                     if ($('#code').val() === ""){
                         $('.warning').remove();
-                        $('.flex-container').append('<div class="warning">Please enter a code.</div>')
+                        $('.flex-container').append('<div class="warning">Please enter a code</div>')
                         return false;
                     }
-                    console.log($('#code').val());
+                    
                     id = socket.id;
                     code = $('#code').val();
                     game = String(code)[0];
                     name = $('#name').val();
-                    console.log(code);
                     socket.binary(false).emit('validate code', {code: code, requestingID: id});
     
 
@@ -110,26 +114,20 @@
                                 displayWaitingRoom(game, code.playersAlreadyInRoom);
                             } else { // game has started
                                 socket.binary(false).emit('new player', {name: name, id: socket.id, gameID: game});
-                                renderGamePage();
+                                renderGamePage(code.code, houseRules);
                                 inGame = true;
                                 socket.binary(false).emit('get game data', {gameID: game});
                                 let gameData;
                                 socket.on(`game data sent${game}`, function(data){
-                                    console.log(loaded);
                                     if (loaded === false){
                                         loaded = true;
                                         console.log(data.gameData.__lastRoll.roll);
                                         if (data.gameData.__lastRoll.roll.length > 0){
-                                            console.log('not empty');
                                             displayDice(data.gameData.__lastRoll.roll,[data.gameData.__lastRoll.topPositions,data.gameData.__lastRoll.leftPositions],data.gameData.__lastRoll.rotations);
                                         } else {
-                                            console.log('empty');
                                             displayDice([6,6],[[0.25,0.75],[0.9,0.1]],[0.5,0.5]);
-                                            //debugger;
                                         }
-                                        console.log(data);
                                         gameData = data.gameData;
-                                        console.log(gameData);
                                         playGame(game, data, true);
                                     }
                                 });
@@ -154,7 +152,6 @@
                     $('.flex-container').append('<div class="player-pool"></div>');
                     $('.flex-container').append('<button id="play">Play!</button>');
                     $('#play').css("width", "initial");
-
                     if (playersInRoom){
                         playersInRoom.forEach((player) => {
                             $('.player-pool').append(`<div class="player-container" id="${player.__id}-container"><div class="player" id="${player.__id}">${player.__name}</div><div class="dice-box" id="${player.__id}-box"></div></div>`);
@@ -166,24 +163,18 @@
 
                     $('body').append(houseRules);   
 
-                    $('details').on('toggle', (event) => {
-                        console.log(event);
-                        console.log(event.target.clientHeight);
-                    });
 
                     $('#play').click(() => {
                         console.log('#play.click()');
                         // transition to main page
                         socket.binary(false).emit('start game', {gameID: game});
 
-
                     });
 
                     socket.on(`go to game page${game}`, (gameData)=>{
                         console.log('going to game');
-                        console.log(gameData);
                         inWaitingRoom = false;
-                        renderGamePage();
+                        renderGamePage(code, houseRules);
                         displayDice([6,6],[[0.25,0.75],[0.9,0.1]],[0.5,0.5]);
                         inGame = true;
                         playGame(game, gameData, false);
@@ -209,27 +200,11 @@
 
                     // leave the game on disconnect
                     $(window).on('unload', (event) => {
-                        console.log("unloading1");
                         socket.binary(false).emit('remove player', {gameID: roomNo, id: socket.id, code: code, removeID: 1});
                         socket.close();
                     });
                 }
 
-
-                function renderGamePage(){
-                    $('body').children().remove();
-                    $('body').append(`<p id="room-code">Room code: ${code}</p>`)
-                    $('body').append('<h1 class="game-title">3 Man!</h1>');
-                    $('body').append('<div class="flex-container"></div>');
-                    $('.flex-container').append($('div')).append('<h2>Players</h2><div class="player-pool" id="player-pool"></div>');
-                    $('.flex-container').append('<button id="roll-btn">Roll</button>');
-                    $('.flex-container').append('<button id="doubles-roll-btn">Roll</button>');
-                    $('.flex-container').append('<div id="message-box"></div>');
-                    $('.flex-container').append('<div id="table"></div>');
-                    $('body').append(houseRules);
-                    $('details').addClass('game-rules');   
-
-                }
                 
                 function playGame(game, gameData, joiningLate){
                     $('#roll-btn').hide();
@@ -357,7 +332,7 @@
                     socket.on(`new player${game}`, function(player){
                             // add to player pool copy as well?
                             console.log(player);
-                            players.addPlayer(new PlayerPool.Player(player.name, player.id));
+                            players.addPlayer(new Player(player.name, player.id));
                             $('.player-pool').append(`<div class="player-container" id="${player.id}-container"><div class="player" id="${player.id}">${player.name}</div><div class="dice-box" id="${player.id}-box"></div></div>`);
                             $('.dice-box').droppable({
                             drop: function(event, ui){

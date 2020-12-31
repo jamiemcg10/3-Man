@@ -84,7 +84,7 @@ io.on('connection', function(socket) {
         let code = generateCode();
         console.log(data);
         console.log(`code${data}`);
-        io.sockets.binary(false).emit('game code', {code: code, id: data});
+        io.sockets.binary(false).emit('new game code', {code: code, id: data});
     });
     
     function generateCode(){
@@ -269,12 +269,18 @@ io.on('connection', function(socket) {
     });
 
     socket.on('remove player', function(data){
+        let assignNewThreeMan = false;
         console.log(data);
         console.log(`removing a player ${data.removeID}`);
         console.log(games[data.gameID]);
         if (games[data.gameID] !== undefined){
 
-            if (games[data.gameID].inProgress & games[data.gameID].players.currentPlayer.id === data.id){
+            if (games[data.gameID].inProgress & data.id === games[data.gameID].players.threeMan.id){ // player is 3 man
+                console.log("player that left was the 3 man");
+                assignNewThreeMan = true;
+            } 
+
+            if (games[data.gameID].inProgress & games[data.gameID].players.currentPlayer.id === data.id){ // player is current player
                 
                 games[data.gameID].players.removePlayer(data.id);                
                 console.log(games[data.gameID].players.currentPlayer);
@@ -287,10 +293,12 @@ io.on('connection', function(socket) {
             } else {
                 games[data.gameID].players.removePlayer(data.id);
             }
+
             
-            
+
+
             console.log(games[data.gameID].players.list.length);
-            if (games[data.gameID].players.list.length === 0){
+            if (games[data.gameID].players.list.length === 0){ // no more players in room
                 games[data.gameID] = null;
                 // if next 6 lines work, add them to 1.0
                 console.log(data.code);
@@ -303,12 +311,14 @@ io.on('connection', function(socket) {
                     games[0][games[0].indexOf(codeToRemove)] = null;
                 }
                 console.log(`ACTIVE GAME CODES: ${games[0]}`);
+            } else if (assignNewThreeMan){
+                io.sockets.binary(false).emit(`new three man${data.gameID}`, {new3Man: games[data.gameID].players.threeMan});
             }
 
             io.sockets.binary(false).emit(`remove player${data.gameID}`, {id: data.id});
         }   
 
-        console.log(`removed player: ${games[data.gameID]}`);
+        console.log(games[data.gameID]);
     });
 
     
