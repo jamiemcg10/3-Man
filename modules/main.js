@@ -16,6 +16,7 @@ $(document).ready(() => {
     //     let y = e.pageY;
     //     e.target.title = `x: ${x}, y: ${y}`;
     // };
+    console.log(window.location.href);
     if (window.location.href === "www.3mangame.com" || window.location.href === "http://www.3mangame.com"){
         window.location.href = "https://www.3mangame.com";
     }
