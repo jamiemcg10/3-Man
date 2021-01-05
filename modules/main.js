@@ -281,6 +281,7 @@ $(document).ready(() => {
             if (newRule === ''){  // highlight box if rule is blank
                 $('#new-blank-rule').css("outline", "auto");
                 $('#new-blank-rule').css("outline-color", "red");
+
                 setTimeout(function(){
                     $('#new-blank-rule').css("outline", "initial");
                 }, 250);

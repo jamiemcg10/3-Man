@@ -118,6 +118,7 @@ io.on('connection', function(socket) {
 
     // for generating and receiving codes
     socket.on('get code', function(data){
+        console.log(games[0]);
         let code = gameFuncs.generateCode(games);
         io.sockets.binary(false).emit('new game code', {code: code, id: data});
     });
@@ -277,6 +278,7 @@ io.on('connection', function(socket) {
     **********/
 
     socket.on('remove player', function(data){
+        console.log(`ACTIVE GAME CODES: ${games[0]}`);
         let assignNewThreeMan = false;
         if (games[data.gameID] !== undefined){ // game that player left is still happening
 

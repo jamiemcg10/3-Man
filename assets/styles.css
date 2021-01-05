@@ -132,6 +132,7 @@ button:disabled {
 .flex-container {
     display: flex;
     flex-direction: column;
+    margin: 0 auto;
 }
 
 .game-title{
@@ -155,6 +156,13 @@ img + .die-label {
     height: 3vh;              
     margin-left: .5vw;
     margin-right: .5vw;
+}
+
+#master-flex-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 72vh;
 }
 
 #message-box{
@@ -196,13 +204,8 @@ img + .die-label {
 }
 
 #report-issue {
-    position: absolute;
-    bottom: 5px;
-    display: flex;
-    width: 99%;
-    margin-right: -20px;
-    margin-left: -20px;
-    padding: -10px;
+    margin: 0 auto;
+    margin-bottom: -3vh;
 }
 
 #report-link{
@@ -286,6 +289,10 @@ img + .die-label {
 
     .dice-box{
         height: 3vh;
+    }
+
+    #master-flex-container{
+        height: 65vh;
     }
 
     #play {
