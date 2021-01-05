@@ -39,15 +39,7 @@ app.use(bodyParser.json());
 
 // Routing
 app.get('/', function(req, res) {
-    console.log(req);
-    console.log(req.secure);
-    if (!req.secure && req.headers.host === "www.3mangame.com"){
-        res.redirect(302, "https://www.3mangame.com/");
-    } else {
-        res.sendFile(path.join(__dirname, 'index.html'));
-    };
-
-    
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/contact', function(req, res) {
