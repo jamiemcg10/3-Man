@@ -140,7 +140,7 @@ $(document).ready(() => {
 
         }
 
-        $('body').append(houseRules);   
+        $('body').append(houseRules);  
 
 
         // event listener for play button click

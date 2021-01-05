@@ -7,6 +7,10 @@ const Game = require('./modules/Game.js');
 const PlayerPool = require('./modules/PlayerPool.js');
 const gameFuncs = require('./modules/gameFuncs.js');
 
+const bodyParser = require('body-parser');
+const nodemailer = require('nodemailer');
+const { getMaxListeners } = require('process');
+const dotenv = require('dotenv').config();
 
 const app = express();
 const server = http.Server(app);
@@ -14,10 +18,23 @@ const io = socketIO(server);
 
 let port = process.env.PORT || 5000;
 
+// create transporter for mailer
+let transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.user,
+        pass: process.env.password
+    }
+});
+
 app.set('port', port);
 app.use('/static', express.static(__dirname + '/static'));
 app.use('/modules', express.static(__dirname + '/modules'));
 app.use('/assets', express.static(__dirname + '/assets'));
+app.use(bodyParser.urlencoded({
+    extended: true
+  }));
+app.use(bodyParser.json());
 
 
 // Routing
@@ -25,9 +42,35 @@ app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// app.get('/game', function(req, res) {
-//     res.sendFile(path.join(__dirname, 'game.html'));
-// });
+app.get('/contact', function(req, res) {
+    res.sendFile(path.join(__dirname, 'contact.html'));
+});
+
+
+app.post('/sendEmail', function(req, res) {
+    let subject = req.body.subject;
+    let message = req.body.message;
+
+    let mailOptions = {
+        from: "jamie.a.smart@gmail.com",
+        to: "jamie.a.smart@gmail.com",
+        subject: `[3 MAN SUPPORT] ${subject}`,
+        text: message
+    }
+
+    transporter.sendMail(mailOptions, (error, info)=>{
+        if (error){
+            console.log(error);
+            res.json({success: false});
+        } else {
+            console.log(`Email sent: ${info.response}`);
+            res.json({success: true});
+        }
+    });
+
+    
+});
+
 
 // Starts the server
 server.listen(port, function(){

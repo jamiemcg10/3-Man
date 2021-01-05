@@ -11,12 +11,13 @@
 
 details {
     position: absolute;
-    bottom: 3vh;
+    bottom: 5vh;
 }
 
 
 details > summary {
     font-size: 2.5vh;
+    outline: none;
 }
 
 details li {
@@ -192,6 +193,21 @@ img + .die-label {
     display: flex;
     justify-content: space-around;
     flex-wrap: wrap;
+}
+
+#report-issue {
+    position: absolute;
+    bottom: 5px;
+    display: flex;
+    width: 99%;
+    margin-right: -20px;
+    margin-left: -20px;
+    padding: -10px;
+}
+
+#report-link{
+    margin: auto;
+    font-size: smaller;
 }
 
 #roll-btn {

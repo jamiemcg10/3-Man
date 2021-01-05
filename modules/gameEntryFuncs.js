@@ -18,6 +18,8 @@ export function renderGamePage(code, houseRules){
     $('.flex-container').append('<button id="doubles-roll-btn">Roll</button>');
     $('.flex-container').append('<div id="message-box"></div>');
     $('.flex-container').append('<div id="table"></div>');
+    $('body').append('<div id="report-issue"><a href="/contact" target="_blank" id="report-link">Report an Issue</a></div>');
+
     $('body').append(houseRules);
     $('details').addClass('game-rules');   
 
