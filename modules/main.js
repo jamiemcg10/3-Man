@@ -18,6 +18,7 @@ $(document).ready(() => {
     // };
     console.log(window.location.href);
     if (window.location.href === "www.3mangame.com" || window.location.href === "http://www.3mangame.com"){
+        console.log("match");
         window.location.href = "https://www.3mangame.com";
     }
     
