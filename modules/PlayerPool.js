@@ -1,5 +1,5 @@
-class PlayerPool {
-    constructor(array_of_players){
+export class PlayerPool {
+    constructor(array_of_players = []){
         // create new array of players
         this.players = [];
         array_of_players.forEach((player) => {
@@ -7,7 +7,7 @@ class PlayerPool {
         });
 
         this.stackHead = 0;
-        this.__threeMan = 0;
+        this.threeMan = 0;
     }
 
     static PlayerPool(obj){
@@ -33,25 +33,14 @@ class PlayerPool {
     }
 
     addPlayer(newPlayer){
-        this.players.push(newPlayer);
+        this.players = [...this.players, newPlayer]
     }
 
-    removePlayer(removeThisId){
-        console.log("removing " + removeThisId);
-        let match = false;
-        for (let i=0; i<this.players.length; i++){
-            if (match){
-                this.players[i-1] = this.players[i];
-            }
-            if (this.players[i].id === removeThisId){
-                match = true;
-                console.log("match");
-            }
-        }
-
-        if (match){
-            this.players.pop();
-        }
+    removePlayer(removeThisName){
+        console.log("removing " + removeThisName);
+        this.players.filter((player) => {
+            return player.name !== removeThisName
+        })
 
         if (this.stackHead >= this.players.length){
             this.stackHead = 0;
@@ -82,11 +71,11 @@ class PlayerPool {
         return this.players;
     }
 
-    set threeMan(newThreeMan){
+    set currentThreeMan(newThreeMan){
         this.__threeMan = newThreeMan;
     }
 
-    get threeMan(){
+    get currentThreeMan(){
         return this.players[this.__threeMan];
     }
     
@@ -126,7 +115,7 @@ class PlayerPool {
 
 }
 
-class Player {
+export class Player {
     constructor(name, id){
         this.__name = name;
         this.__id = id;
@@ -148,4 +137,3 @@ if (typeof module !== "undefined" && module.exports){
         PlayerPool: PlayerPool
     };
 } 
-

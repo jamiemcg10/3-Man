@@ -1,4 +1,4 @@
-class Game {
+export class Game {
     constructor (playerPool){
         this.people = playerPool;
         this.__doublesData = {
@@ -10,12 +10,12 @@ class Game {
             __doublesRollNum: 0
         }
         this.__code;
-        this.__inProgress = false;
+        this.inProgress = false;
         this.__lastRoll = {
-            roll: [],
-            topPositions: [],
-            leftPositions: [],
-            rotations: []
+            roll: [6,6],
+            topPositions: [.25,.75],
+            leftPositions: [.9,.1],
+            rotations: [45,135]
         }
     }
 
@@ -58,14 +58,6 @@ class Game {
         this.__lastRoll.rotations = roll.rotations;
     }
 
-    get inProgress(){
-        return this.__inProgress;
-    }
-
-    set inProgress(game){
-
-    }
-
     pushDoublesDataRoll(roll){
         roll.forEach((die) => {
             this.__doublesData.roll.push(die);
@@ -102,7 +94,7 @@ class Game {
     }
 
     start(){
-        this.__inProgress = true;
+        this.inProgress = true;
     }
 }
 
