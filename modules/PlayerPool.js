@@ -11,22 +11,21 @@ export class PlayerPool {
     }
 
     static PlayerPool(obj){
-        //console.log(obj.players.people.players);
-        let newPP = new PlayerPool(obj.players.people.players);
-        newPP.head = obj.players.people.stackHead;
-        newPP.threeMan = obj.players.people.__threeMan;
-        return newPP;
+        let newPP = new PlayerPool(obj.players.people.players)
+        newPP.head = obj.players.people.stackHead
+        newPP.threeMan = obj.players.people.__threeMan
+        return newPP
     }
 
     equals(testPP){
         if (testPP == null){
-            return false;
+            return false
         } else if (this.players.length !== testPP.list.length){
-            return false;
+            return false
         }
         for (let i=0; i<this.players.length; i++){
             if (this.players[i].__id !== testPP.list[i].__id){
-                return false;
+                return false
             }
         }
         return true;
@@ -36,11 +35,13 @@ export class PlayerPool {
         this.players = [...this.players, newPlayer]
     }
 
-    removePlayer(removeThisName){
-        console.log("removing " + removeThisName);
-        this.players.filter((player) => {
-            return player.name !== removeThisName
-        })
+    updatePlayerName(id, name){
+        let indexToUpdate = this.findPlayerById(id)
+        this.players[indexToUpdate].name = name
+    }
+
+    removePlayer(idToRemove){
+        this.players = this.players.filter(player => player.__id !== idToRemove)
 
         if (this.stackHead >= this.players.length){
             this.stackHead = 0;
@@ -49,6 +50,10 @@ export class PlayerPool {
         if (this.__threeMan >= this.players.length){
             this.__threeMan = 0;
         }
+    }
+
+    findPlayerById(id){
+        return this.players.findIndex((player) => player.id === id)
     }
 
     get currentPlayer(){
@@ -71,12 +76,12 @@ export class PlayerPool {
         return this.players;
     }
 
-    set currentThreeMan(newThreeMan){
-        this.__threeMan = newThreeMan;
+    set current3Man(new3Man){
+        this.threeMan = new3Man;
     }
 
-    get currentThreeMan(){
-        return this.players[this.__threeMan];
+    get current3Man(){
+        return this.players[this.threeMan];
     }
     
     get behind(){
@@ -122,11 +127,15 @@ export class Player {
     }
 
     get name(){
-        return this.__name;
+        return this.__name
     }
 
     get id(){
-        return this.__id;
+        return this.__id
+    }
+
+    set name(name) {
+        this.__name = name
     }
 
 }

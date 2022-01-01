@@ -7,7 +7,6 @@
     let status: string
 
     async function submit(){
-        let success = false
         
         axios.post('http://localhost:5000/sendEmail', {subject, message})
         .then((response)=>{
@@ -16,14 +15,13 @@
         .catch((_e)=>{
             status = 'There was a problem sending your message'
         })
-
     }
 </script>
 {#if status}
     <p class="p-5">{status}</p>
 {:else}
     <div>
-        <h2 class="w-11/12 m-auto my-4">Report an Issue</h2>
+        <div class="w-11/12 m-auto my-4 text-4xl">Report an Issue</div>
         <form class="flex flex-col w-11/12 m-auto" action="" method="POST">
             <label for="subject" class="text-xl mb-1">Subject</label>
             <input type="text" name="subject" bind:value={subject} class="mb-4 p-2 focus:outline-white">

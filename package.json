@@ -7,7 +7,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "concurrently \"npm:server:start\" \"npm:client:start\"",
-    "server:start": "node server.js",
+    "server:start": "cd server && node server.js",
     "client:start": "cd client && npm run dev"
   },
   "author": "Jamie Smart",

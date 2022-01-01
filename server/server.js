@@ -98,37 +98,48 @@ app.get('/checkCode/:code', (req, res) => {
 var games = new Array(10);
 games[0] = [];  // keeps track of game codes currently in use
 
-// move this later - none of this works yet
+// move this later -
 function checkDice(gameID, roll) { 
+    games[gameID].consecutiveRolls++
+    console.log('consecutiveRolls', games[gameID].consecutiveRolls)
+
+    io.to(gameID).emit('clear message board')
+
     let sum = roll.reduce((previous, current) => {
-        previous + current
+        return previous + current
     }, 0)
 
-    if (sum !== 7 && sum !== 11 & !roll.includes(3) & roll[0] !== roll[1]){
-        // NEXT PLAYER!
+    console.log(sum)
+
+    if (sum !== 3 && sum !== 7 && sum !== 11 & !roll.includes(3) & roll[0] !== roll[1]){
+        switchToNextPlayer(gameID)
+        return
     }
 
     if (sum === 3){
-        let target = games[gameID].players.currentPlayer;
+        let target = games[gameID].players.currentPlayer
         games[gameID].players.threeMan = games[gameID].players.list.indexOf(target)
     
-        // change below to send out the new index
-        io.to(gameID).emit(`new three man`, {new3Man: games[gameID].players.threeMan})
+        io.to(gameID).emit(`new three man`, {
+                                                new3Man: games[gameID].players.threeMan, 
+                                                name: games[gameID].players.current3Man.name})
+        switchToNextPlayer(gameID)
     }
 
     if (sum === 7){
-        let target = games[gameID].players.ahead;
-        io.to(gameID).emit(`drink`, {id: target.id, name: target.name})
+        let target = games[gameID].players.ahead
+        io.to(gameID).emit(`drink`, {name: target.name})
     }
 
     if (sum === 11){
-        let target = games[gameID].players.behind;
-        io.to(gameiD).emit(`drink`, {id: target.id, name: target.name})
+        let target = games[gameID].players.behind
+        io.to(gameID).emit(`drink`, {name: target.name})
     }                        
 
     if (roll.includes(3)){
-        let target = games[data.gameID].players.threeMan
-        io.to(gameID).emit(`drink`, {id: target.id, name: target.name})
+        let target = games[gameID].players.current3Man
+        console.log(target)
+        io.to(gameID).emit(`drink`, {name: target.name})
     }
 
     // test for doubles - needs to change if more dice are allowed
@@ -136,7 +147,19 @@ function checkDice(gameID, roll) {
         games[gameID].doublesRollNum = 1 // initialize doubles counter in game data
         io.to(gameID).emit('doubles spiral') // brodcast to all sockets to start doubles handling     
     }
+
+    console.log('rolls', games[gameID].consecutiveRolls, 'rolls % 5', games[gameID].consecutiveRolls % 2)
+    if (games[gameID].consecutiveRolls % 5 === 0){
+        let target = games[gameID].players.currentPlayer
+        io.to(gameID).emit(`player making rule`, { name: target.name })
+    }
 };
+
+function switchToNextPlayer(gameID){
+    // move to the next player and signal to start their turn
+    games[gameID].endTurn()
+    io.to(gameID).emit(`switch to next player`)
+}
 
 io.on('connection', function(socket) {
     socket.on('join', function(data){
@@ -148,33 +171,41 @@ io.on('connection', function(socket) {
         GAME SETUP
 
     **********/
-    socket.on('new player', function(data){
-        console.log("socket.on('new player', function(data)", data)
-        games[data.gameID].players.addPlayer(new Player(data.name, data.id))
-        io.to(data.gameID).emit(`add player`, {name: data.name, id: data.id})
+    socket.on('update name', function({ id, name, gameID }){
+        console.log(id, name, gameID)
+        games[gameID].players.updatePlayerName(id, name)
+        console.log(games[gameID].players)
+        io.to(gameID).emit('update player name', { id, name })
 
-    });
+    })
+    socket.on('new player', function({ name, id, gameID}){
+        console.log("socket.on('new player', function(data)", name, id, gameID)
+        games[gameID].players.addPlayer(new Player(name, id))
+        io.to(gameID).emit(`add player`, {name, id })
+        if (games[gameID].inProgress) {
+            games[gameID].players.threeMan = games[gameID].players.length - 1
+        }
+    })
 
     socket.on('start game', function(data){
         // signal to go to game page and start the game
         games[data.gameID].inProgress = true
         io.to(data.gameID).emit(`go to game page`, {gameData: games[data.gameID]})
         io.sockets.emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer})
-    });
+    })
 
     socket.on('get game data', function(data){
         console.log('socket.on(\'get game data\', function(data)')
+        // TODO" check code to make sure it's valid here
         if (games[data.gameID] == null) {  // if room is empty, instantiate a new player pool and game
             let pp = new PlayerPool()
             games[data.gameID] = new Game(pp)
             console.log('making new game', games[data.gameID])
-            // start the turn of the player who joined first for when everyone enters the room
-            // io.sockets.emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
         }
         // send current game data for players who join late
         console.log("socket.on('get game data', function(data)")
-        io.to(data.gameID).emit(`game data sent`, {gameData: games[data.gameID]});
-    });
+        io.to(data.gameID).emit(`game data sent`, {gameData: games[data.gameID], requestingId: data.id})
+    })
     
     /*********
 
@@ -191,9 +222,9 @@ io.on('connection', function(socket) {
         // refactor next line later (sides, number of die into function)
         let roll = [(Math.floor((Math.random() * 100)) % 6) + 1, (Math.floor((Math.random() * 100)) % 6) + 1]
 
-        let topPositions;
-        let leftPositions;
-        let rotations;
+        let topPositions
+        let leftPositions
+        let rotations
 
         [topPositions, leftPositions, rotations] = generatePositions(2);  // 2 is number of dice
         
@@ -201,30 +232,17 @@ io.on('connection', function(socket) {
         games[gameID].lastRoll = {roll, 
                                         topPositions,
                                         leftPositions,
-                                        rotations};
+                                        rotations}
 
 
-        io.to(gameID).emit(`roll`, {roll, topPositions, leftPositions, rotations});
-        checkDice(game, roll)
-    });
-    
+        io.to(gameID).emit(`roll`, {roll, topPositions, leftPositions, rotations})
+        checkDice(gameID, roll)
+    })
 
-    socket.on('turn complete', function(data) {
-        // move to the next player and signal to start their turn
-        games[data.gameID].players.nextPlayer();
-        io.sockets.emit(`end of turn${data.gameID}`);
-        io.sockets.emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
-        // kill any doubles rolls happening
-        games[data.gameID].doublesRollNum = 0;
-    });
 
-    socket.on('player making rule', function(data){
-        io.sockets.emit(`player making rule${data.gameID}`, {name: data.name})
-    });
-
-    socket.on('new rule', function(data){
-        io.sockets.emit(`new rule${data.gameID}`, {rule: data.ruleText});
-    });
+    socket.on('new rule', function({ newRuleText }){
+        io.sockets.emit(`new rule`, { rule: newRuleText });
+    })
 
     //  DOUBLES ROLL LISTENTERS
     socket.on('dice distributed', function(data){
@@ -279,46 +297,92 @@ io.on('connection', function(socket) {
         PLAYER LEFT GAME
 
     **********/
+   socket.on('disconnecting', (reason)=>{
+        console.log('REASON: ', reason)
+        console.log(socket.id, socket.rooms)
+        console.log( socket.rooms.values())
+        let rooms = [...socket.rooms.values()]
+        for (let i=1; i < rooms.length; i++){
+            removePlayerFromGame(socket.id, rooms[i])
+        }
+    })
 
-    socket.on('remove player', function(data){
-        console.log(`ACTIVE GAME CODES: ${games[0]}`);
-        let assignNewThreeMan = false;
-        if (games[data.gameID] !== undefined){ // game that player left is still happening
+    function removePlayerFromGame(id, gameID){
+        console.log('removing', id, 'from', gameID)
+        if (games[gameID] !== undefined){ // game that player left is still happening TODO: THIS PROBABLY ALSO ISN'T WORKING
 
-            if (games[data.gameID].inProgress & data.id === games[data.gameID].players.threeMan.id){ // leaving player is 3 man
-                assignNewThreeMan = true;
+            games[gameID].players.removePlayer(id)  
+
+            console.log(306, games[gameID].players.list.length)
+            if (games[gameID].players.list.length === 0){ // no more players in room - destroy the game
+                games[gameID] = null
+                for(let i=0; i<games[0].length; i++){
+                    if(Math.floor(games[0][i]/1000) === parseInt(gameID)){
+                        games[0].splice(i, 1)
+                    }
+                }
+                console.log(`ACTIVE GAME CODES IN REMOVE PLAYER: ${games[0]}`)
+                return
+
             } 
 
-            if (games[data.gameID].inProgress & games[data.gameID].players.currentPlayer.id === data.id){ // leaving player is current player
-                games[data.gameID].players.removePlayer(data.id);        
-                io.sockets.emit(`start turn${data.gameID}`, {player: games[data.gameID].players.currentPlayer});
-                
-                // kill any doubles rolls happening
-                games[data.gameID].clearDoublesData();
-                games[data.gameID].doublesRollNum = 0;
+            if (games[gameID].inProgress && id === games[gameID].players.threeMan.id){ // leaving player is 3 man
+                io.to(gameID).emit(`new three man`, {new3Man: games[gameID].players.threeMan})
+            } 
+
+            if (games[gameID].inProgress && games[gameID].players.currentPlayer.id === id){ // leaving player is current player
+                switchToNextPlayer()
             } else { // just remove the player
-                games[data.gameID].players.removePlayer(data.id);
+                games[gameID].players.removePlayer(id)
+            }
+
+
+
+            // signal to remove the player
+            io.to(gameID).emit(`remove player`, { id })
+        }  
+    }
+
+    socket.on('remove player', function({ id, gameID, code, name}){
+        console.log(`socket.on('remove player', function(data)`)
+        console.log(`ACTIVE GAME CODES: ${games[0]}`)
+        console.log({id}, {gameID}, {code}, {name})
+        console.log('player to be removed', games[gameID]?.players)
+        // FIX EVERYTHING ABOUT THIS
+        let assignNewThreeMan = false
+        if (games[gameID] !== undefined){ // game that player left is still happening TODO: THIS PROBABLY ALSO ISN'T WORKING
+
+            if (games[gameID].inProgress && id === games[gameID].players.threeMan.id){ // leaving player is 3 man
+                assignNewThreeMan = true
+            } 
+
+            if (games[gameID].inProgress && games[gameID].players.currentPlayer.id === id){ // leaving player is current player
+                games[gameID].players.removePlayer(id)  
+                switchToNextPlayer()
+            } else { // just remove the player
+                games[gameID].players.removePlayer(id)
             }
 
             
-            if (games[data.gameID].players.list.length === 0){ // no more players in room - destroy the game
-                games[data.gameID] = null;
-                let codeToRemove = parseInt(data.code,10);
+            if (games[gameID].players.list.length === 0){ // no more players in room - destroy the game
+                games[gameID] = null
+                let codeToRemove = parseInt(code,10)
                 if (games[0].indexOf(codeToRemove) >= 0){
-                    games[0][games[0].indexOf(codeToRemove)] = null;
+                    games[0][games[0].indexOf(codeToRemove)] = null
                 }
-                console.log(`ACTIVE GAME CODES: ${games[0]}`);
+                console.log(`ACTIVE GAME CODES IN REMOVE PLAYER: ${games[0]}`)
             } else if (assignNewThreeMan){ // set a new three man
-                io.sockets.emit(`new three man${data.gameID}`, {new3Man: games[data.gameID].players.threeMan});
+                io.to(gameID).emit(`new three man`, {new3Man: games[gameID].players.threeMan})
             }
 
             // signal to remove the player
-            io.sockets.emit(`remove player${data.gameID}`, {id: data.id});
+            io.to(gameID).emit(`remove player`, { name })
         }   
+        console.log('player removed', games[gameID]?.players)
 
-    });
+    })
 
     
     
-});
+})
 

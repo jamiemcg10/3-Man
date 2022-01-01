@@ -6,7 +6,8 @@ import type { Game } from '../../../modules/Game'
 let id: string
 
 const socket = io("http://localhost:5000", {
-    });
+    reconnection: false
+})
 
 socket.on('connect', () => {
     id = socket.id
@@ -18,12 +19,18 @@ export const store = writable<{
     id: string,
     gameID: string,
     code: string,
-    game: Game
+    validCode: boolean,
+    game: Game,
+    drinking: string,
+    ruleBeingMade: boolean
 }>({
     socket,
-    name: null,
-    id,
-    gameID: null,
-    code: null,
+    name: '',
+    id: socket.id,
+    gameID: '',
+    code: '',
+    validCode: false,
     game: null,
+    drinking: '',
+    ruleBeingMade: false,  
 })
