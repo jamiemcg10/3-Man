@@ -17,7 +17,7 @@
     "express": "^4.17.1",
     "modules": "file:modules",
     "nodemailer": "^6.4.17",
-    "socket.io": "^4.3.2"
+    "socket.io": "^4.5.3"
   },
   "engines": {
     "node": "12.14.1"
